@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+selaginella
 
 # Test binary, built with `go test -c`
 *.test
@@ -20,3 +21,6 @@
 # Go workspace file
 go.work
 .idea
+
+# Configuration file
+selaginella.toml

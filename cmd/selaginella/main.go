@@ -1,4 +1,4 @@
-package selaginella
+package main
 
 import (
 	"context"
