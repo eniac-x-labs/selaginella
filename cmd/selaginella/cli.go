@@ -26,12 +26,14 @@ var (
 )
 
 func runSyncer(ctx *cli.Context) error {
+	// Load configuration
 	cfg, err := config.LoadConfig(ctx.String(ConfigFlag.Name))
 	if err != nil {
 		log.Error("failed to load config", "err", err)
 		return err
 	}
 
+	// Connect to the database
 	db, err := database.NewDB(cfg.MasterDB)
 	if err != nil {
 		log.Error("failed to connect to database", "err", err)
@@ -39,15 +41,22 @@ func runSyncer(ctx *cli.Context) error {
 	}
 	defer db.Close()
 
+	// Connect to Redis
 	redis, err := database.NewRedis(cfg.Redis)
+	if err != nil {
+        log.Error("failed to connect to Redis", "err", err)
+        return err
+    }
 
+    // Create lithosphere instance
 	lithosphere, err := selaginella.NewSelaginella(db, redis, cfg.Chain, cfg.RPCs, cfg.HTTPServer, cfg.MetricsServer)
 	if err != nil {
 		log.Error("failed to create lithosphere", "err", err)
 		return err
 	}
 
-	log.Info("running lithosphere...")
+	// Run lithosphere
+	log.Info("running lithosphere ...")
 	return lithosphere.Run(ctx.Context)
 }
 
