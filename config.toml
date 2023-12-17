@@ -1,0 +1,9 @@
+app_name = "Selaginella"
+port = 8080
+
+[database]
+host = ""
+port = 5432
+username = ""
+password = ""
+name = "selaginella"
