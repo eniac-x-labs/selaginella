@@ -1,4 +1,4 @@
--- 001_init_schema.sql
+-- 1_initialize_schema.up.sql
 
 -- Create deposits table 
 CREATE TABLE IF NOT EXISTS deposits (

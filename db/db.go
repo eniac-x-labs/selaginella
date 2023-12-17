@@ -16,7 +16,14 @@ func InitDB(dbUser, dbPassword, dbName, dbHost string, dbPort int) {
 	var err error
 
 	// Build database connection string
-	connString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%d sslmode=disable", dbUser, dbPassword, dbName, dbHost, dbPort)
+	connString := fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		dbUser,
+		dbPassword,
+		dbHost,
+		dbPort,
+		dbName,
+	)
 
 	// Open database connection
 	DB, err = sql.Open("postgres", connString)
@@ -30,7 +37,7 @@ func InitDB(dbUser, dbPassword, dbName, dbHost string, dbPort int) {
 		log.Fatal("Error pinging database:", err)
 	}
 
-	fmt.Println("Database connection established")
+	log.Println("Database connection established")
 
 	// Set parameters such as database connection pool
 	DB.SetMaxOpenConns(10)
@@ -38,7 +45,7 @@ func InitDB(dbUser, dbPassword, dbName, dbHost string, dbPort int) {
 
 	// Perform database migration
 	if err := migrate.MigrateDB(DB, dbName); err != nil {
-		log.Fatal("Error running database migrations:", err)
+		log.Fatal("Error running database migrations: ", err)
 	}
 }
 
@@ -47,9 +54,9 @@ func CloseDB() {
 	if DB != nil {
 		err := DB.Close()
 		if err != nil {
-			log.Println("Error closing database connection:", err)
+			log.Fatal("Error closing database connection:", err)
 		} else {
-			fmt.Println("Database connection closed")
+			log.Println("Database connection closed")
 		}
 	}
 }

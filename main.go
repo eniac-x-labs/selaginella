@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -40,13 +39,13 @@ func main() {
 	}
 
 	// Print configuration information
-	fmt.Printf("App Name: %s\n", config.AppName)
-	fmt.Printf("Port: %d\n", config.Port)
-	fmt.Printf("Database Host: %s\n", config.Database.Host)
-	fmt.Printf("Database Port: %d\n", config.Database.Port)
-	fmt.Printf("Database Username: %s\n", config.Database.Username)
-	fmt.Printf("Database Password: %s\n", config.Database.Password)
-	fmt.Printf("Database Name: %s\n", config.Database.Name)
+	log.Printf("App Name: %s\n", config.AppName)
+	log.Printf("Port: %d\n", config.Port)
+	log.Printf("Database Host: %s\n", config.Database.Host)
+	log.Printf("Database Port: %d\n", config.Database.Port)
+	log.Printf("Database Username: %s\n", config.Database.Username)
+	log.Printf("Database Password: %s\n", config.Database.Password)
+	log.Printf("Database Name: %s\n", config.Database.Name)
 
 	// Initialize database connection
 	db.InitDB(
