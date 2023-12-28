@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/lib/pq"
 	"github.com/evm-layer2/selaginella/db/migrate"
+	_ "github.com/lib/pq"
 )
 
 var DB *sql.DB

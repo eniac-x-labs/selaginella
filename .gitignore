@@ -2,4 +2,7 @@
 selaginella
 
 # Configuration file
-config.toml
+*.toml
+
+#IDE
+.idea

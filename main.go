@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -26,7 +25,7 @@ type Config struct {
 
 func main() {
 	// Read configuration file contents
-	configFile, err := ioutil.ReadFile("config.toml")
+	configFile, err := os.ReadFile("config.toml")
 	if err != nil {
 		log.Fatal("Error reading config file:", err)
 	}
@@ -58,12 +57,12 @@ func main() {
 
 	// Handle termination signal
 	c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-    go func() {
-        <-c
-        // Close database connection when signal is received
-        db.CloseDB()
-        os.Exit(1)
-    }()
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		// Close database connection when signal is received
+		db.CloseDB()
+		os.Exit(1)
+	}()
 
 }
