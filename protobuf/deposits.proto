@@ -1,0 +1,28 @@
+// deposits.proto
+
+syntax = "proto3";
+
+package deposit;
+
+option go_package = "../deposit";
+
+service DepositService {
+  rpc AddDeposit(AddDepositRequest) returns (AddDepositResponse);
+}
+
+message AddDepositRequest {
+  string wallet_guid = 1;
+  string user_guid = 2;
+  string asset_guid = 3;
+  string transaction_guid = 4;
+  string from_address = 5;
+  string to_address = 6;
+  string amount = 7;
+  string tx_hash = 8;
+  string tx_fee = 9;
+  int32 status = 10;
+}
+
+message AddDepositResponse {
+  string guid = 1;
+}

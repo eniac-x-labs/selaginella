@@ -1,24 +1,33 @@
-GITCOMMIT := $(shell git rev-parse HEAD)
-GITDATE := $(shell git show -s --format='%ct')
+# Go parameters
+GOCMD=go
+GOBUILD=$(GOCMD) build
+GOCLEAN=$(GOCMD) clean
+GOTEST=$(GOCMD) test
+GOGET=$(GOCMD) get
 
-LDFLAGSSTRING +=-X main.GitCommit=$(GITCOMMIT)
-LDFLAGSSTRING +=-X main.GitDate=$(GITDATE)
-LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
+# Main package path
+MAIN_PATH=main.go
 
-selaginella:
-	env GO111MODULE=on go build -v $(LDFLAGS) ./cmd/selaginella
+# Binary names
+BINARY_NAME=selaginella
 
-clean:
-	rm selaginella
+all: test build
+
+build:
+	$(GOBUILD) -o $(BINARY_NAME) $(MAIN_PATH)
 
 test:
-	go test -v ./...
+	$(GOTEST) -v ./...
 
-lint:
-	golangci-lint run ./...
+clean:
+	$(GOCLEAN)
+	rm -f $(BINARY_NAME)
 
-.PHONY: \
-	selaginella \
-	clean \
-	test \
-	lint
+run: build
+	./$(BINARY_NAME)
+
+deps:
+	$(GOGET) -v ./...
+
+.PHONY: all build test clean run deps
+

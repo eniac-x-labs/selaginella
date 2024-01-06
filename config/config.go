@@ -1,76 +1,38 @@
 package config
 
 import (
-	"os"
-
 	"github.com/BurntSushi/toml"
-	"github.com/ethereum/go-ethereum/log"
+	"os"
 )
 
-const defaultLoopInterval = 5000
-
 type Config struct {
-	Chain         ChainConfig  `toml:"chain"`
-	RPCs          RPCsConfig   `toml:"rpcs"`
-	Redis         RedisConfig  `toml:"redis"`
-	MasterDB      DBConfig     `toml:"master_db"`
-	SlaveDB       DBConfig     `toml:"slave_db"`
-	SlaveDbEnable bool         `toml:"slave_db_enable"`
-	HTTPServer    ServerConfig `toml:"http"`
-	MetricsServer ServerConfig `toml:"metrics"`
+	AppName  string `toml:"app_name"`
+	Database struct {
+		Host     string `toml:"host"`
+		Port     int    `toml:"port"`
+		Username string `toml:"username"`
+		Password string `toml:"password"`
+		Name     string `toml:"name"`
+	} `toml:"database"`
+	Rpc struct {
+		Port int `toml:"port"`
+	}
 }
 
-type ChainConfig struct {
-	StartingHeight    uint `toml:"starting-height"`
-	ConfirmationDepth uint `toml:"l1-confirmation-depth"`
-	PollingInterval   uint `toml:"l1-polling-interval"`
-}
+// New Setup init config
+func New(path string) (*Config, error) {
+	// config global config instance
+	var config = new(Config)
 
-type RPCsConfig struct {
-	EvmRPC string `toml:"evm-rpc"`
-}
-
-type DBConfig struct {
-	Host     string `toml:"host"`
-	Port     int    `toml:"port"`
-	Name     string `toml:"name"`
-	User     string `toml:"user"`
-	Password string `toml:"password"`
-}
-
-type ServerConfig struct {
-	Host string `toml:"host"`
-	Port int    `toml:"port"`
-}
-
-type RedisConfig struct {
-	Host     string `toml:"host"`
-	Port     int    `toml:"port"`
-	Password string `toml:"password"`
-	DB       int    `toml:"db"`
-}
-
-func LoadConfig(path string) (Config, error) {
-	log.Debug("loading config", "path", path)
-
-	var cfg Config
-	data, err := os.ReadFile(path)
+	f, err := os.ReadFile(path)
 	if err != nil {
-		return cfg, err
+		return nil, err
 	}
 
-	data = []byte(os.ExpandEnv(string(data)))
-	log.Debug("parsed config file", "data", string(data))
-
-	if _, err := toml.Decode(string(data), &cfg); err != nil {
-		log.Error("failed to decode config file", "err", err)
-		return cfg, err
+	err = toml.Unmarshal(f, &config)
+	if err != nil {
+		return nil, err
 	}
 
-	if cfg.Chain.PollingInterval == 0 {
-		cfg.Chain.PollingInterval = defaultLoopInterval
-	}
-
-	log.Info("loaded chain config", "config", cfg.Chain)
-	return cfg, nil
+	return config, nil
 }
