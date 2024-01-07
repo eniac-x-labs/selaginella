@@ -1,0 +1,23 @@
+// deposits.proto
+
+syntax = "proto3";
+
+package deposit;
+
+option go_package = "../bridge";
+
+service BridgeService {
+  rpc crossChainTransact(BridgeRequest) returns (BridgeResponse);
+}
+
+message BridgeRequest {
+  string source_chain_id = 1;
+  string dest_chain_id = 2;
+  string receive_address = 3;
+  string amount = 4;
+}
+
+message BridgeResponse {
+  bool success = 1;
+  string message = 2;
+}

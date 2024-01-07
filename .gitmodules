@@ -1,0 +1,4 @@
+[submodule "wrap-bridge"]
+	path = wrap-bridge
+	url = https://github.com/bridge-alchemy/wrap-bridge.git
+
