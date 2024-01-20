@@ -1,6 +1,6 @@
 # selaginella
 
-ethereum and layer2 wallet scanner
+Cross-chain interoperability relayer
 
 ## How to develop 🤪
 
