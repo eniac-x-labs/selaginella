@@ -19,7 +19,7 @@ type DB struct {
 	CrossChainTransfer CrossChainTransferDB
 }
 
-func NewDB(ctx context.Context, dbConfig config.Database) (*DB, error) {
+func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
 	dsn := fmt.Sprintf("host=%s dbname=%s sslmode=disable", dbConfig.DbHost, dbConfig.DbName)
 	if dbConfig.DbPort != 0 {
 		dsn += fmt.Sprintf(" port=%d", dbConfig.DbPort)

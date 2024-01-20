@@ -20,9 +20,9 @@ type DB struct {
 }
 
 type RPC struct {
-	RpcUrl    string   `yaml:"rpc_url"`
-	ChainId   uint64   `yaml:"chain_id"`
-	Contracts []string `yaml:"contracts"`
+	RpcUrl              string `yaml:"rpc_url"`
+	ChainId             uint64 `yaml:"chain_id"`
+	FoundingPoolAddress string `yaml:"founding_pool_address"`
 }
 
 type Config struct {

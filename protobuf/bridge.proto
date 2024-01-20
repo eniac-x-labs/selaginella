@@ -1,10 +1,7 @@
-// deposits.proto
-
 syntax = "proto3";
 
-package deposit;
-
-option go_package = "../bridge";
+option go_package = "./protobuf/pb";
+package selaginella.proto_rpc;
 
 service BridgeService {
   rpc crossChainTransact(BridgeRequest) returns (BridgeResponse);
