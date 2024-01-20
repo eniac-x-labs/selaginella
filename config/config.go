@@ -33,7 +33,7 @@ type Config struct {
 	Database   DB     `yaml:"database"`
 }
 
-func New(path string) (*Config, error) {
+func NewConfig(path string) (*Config, error) {
 	var config = new(Config)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {

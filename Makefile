@@ -6,7 +6,7 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 
 # Main package path
-MAIN_PATH=main.go
+MAIN_PATH=./cmd
 
 # Binary names
 BINARY_NAME=selaginella

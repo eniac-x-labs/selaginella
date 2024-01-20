@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS cross_chain_transfer (
     dest_receive_address  VARCHAR NOT NULL,
     amount                UINT256 NOT NULL,
     status                SMALLINT DEFAULT 0,
-    timestamp   INTEGER NOT NULL UNIQUE CHECK (timestamp > 0),
+    timestamp             INTEGER NOT NULL UNIQUE CHECK (timestamp > 0)
 );
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_timestamp ON cross_chain_transfer(timestamp);
 CREATE INDEX IF NOT EXISTS cross_chain_tx_hash ON cross_chain_transfer(tx_hash);

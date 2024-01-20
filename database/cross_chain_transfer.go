@@ -1,8 +1,10 @@
 package database
 
 import (
-	"github.com/google/uuid"
 	"math/big"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/ethereum/go-ethereum/common"
 )
