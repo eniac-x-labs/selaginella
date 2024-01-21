@@ -12,7 +12,7 @@ import (
 	"github.com/evm-layer2/selaginella/common/cliapp"
 	"github.com/evm-layer2/selaginella/config"
 	"github.com/evm-layer2/selaginella/database"
-	"github.com/evm-layer2/selaginella/driver/services"
+	"github.com/evm-layer2/selaginella/services"
 )
 
 var (
