@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BridgeService_CrossChainTransact_FullMethodName = "/selaginella.proto_rpc.BridgeService/crossChainTransact"
+	BridgeService_CrossChainTransfer_FullMethodName   = "/selaginella.proto_rpc.BridgeService/crossChainTransfer"
+	BridgeService_ChangeTransferStatus_FullMethodName = "/selaginella.proto_rpc.BridgeService/changeTransferStatus"
 )
 
 // BridgeServiceClient is the client API for BridgeService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BridgeServiceClient interface {
-	CrossChainTransact(ctx context.Context, in *BridgeRequest, opts ...grpc.CallOption) (*BridgeResponse, error)
+	CrossChainTransfer(ctx context.Context, in *CrossChainTransferRequest, opts ...grpc.CallOption) (*CrossChainTransferResponse, error)
+	ChangeTransferStatus(ctx context.Context, in *CrossChainTransferStatusRequest, opts ...grpc.CallOption) (*CrossChainTransferStatusResponse, error)
 }
 
 type bridgeServiceClient struct {
@@ -37,9 +39,18 @@ func NewBridgeServiceClient(cc grpc.ClientConnInterface) BridgeServiceClient {
 	return &bridgeServiceClient{cc}
 }
 
-func (c *bridgeServiceClient) CrossChainTransact(ctx context.Context, in *BridgeRequest, opts ...grpc.CallOption) (*BridgeResponse, error) {
-	out := new(BridgeResponse)
-	err := c.cc.Invoke(ctx, BridgeService_CrossChainTransact_FullMethodName, in, out, opts...)
+func (c *bridgeServiceClient) CrossChainTransfer(ctx context.Context, in *CrossChainTransferRequest, opts ...grpc.CallOption) (*CrossChainTransferResponse, error) {
+	out := new(CrossChainTransferResponse)
+	err := c.cc.Invoke(ctx, BridgeService_CrossChainTransfer_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bridgeServiceClient) ChangeTransferStatus(ctx context.Context, in *CrossChainTransferStatusRequest, opts ...grpc.CallOption) (*CrossChainTransferStatusResponse, error) {
+	out := new(CrossChainTransferStatusResponse)
+	err := c.cc.Invoke(ctx, BridgeService_ChangeTransferStatus_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,42 +61,57 @@ func (c *bridgeServiceClient) CrossChainTransact(ctx context.Context, in *Bridge
 // All implementations must embed UnimplementedBridgeServiceServer
 // for forward compatibility
 type BridgeServiceServer interface {
-	CrossChainTransact(context.Context, *BridgeRequest) (*BridgeResponse, error)
+	CrossChainTransfer(context.Context, *CrossChainTransferRequest) (*CrossChainTransferResponse, error)
+	ChangeTransferStatus(context.Context, *CrossChainTransferStatusRequest) (*CrossChainTransferStatusResponse, error)
 }
 
 // UnimplementedBridgeServiceServer must be embedded to have forward compatible implementations.
 type UnimplementedBridgeServiceServer struct {
 }
 
-func (UnimplementedBridgeServiceServer) CrossChainTransact(context.Context, *BridgeRequest) (*BridgeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CrossChainTransact not implemented")
+func (UnimplementedBridgeServiceServer) CrossChainTransfer(context.Context, *CrossChainTransferRequest) (*CrossChainTransferResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CrossChainTransfer not implemented")
 }
-
-// UnsafeBridgeServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to BridgeServiceServer will
-// result in compilation errors.
-type UnsafeBridgeServiceServer interface {
-	mustEmbedUnimplementedBridgeServiceServer()
+func (UnimplementedBridgeServiceServer) ChangeTransferStatus(context.Context, *CrossChainTransferStatusRequest) (*CrossChainTransferStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangeTransferStatus not implemented")
 }
 
 func RegisterBridgeServiceServer(s grpc.ServiceRegistrar, srv BridgeServiceServer) {
 	s.RegisterService(&BridgeService_ServiceDesc, srv)
 }
 
-func _BridgeService_CrossChainTransact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BridgeRequest)
+func _BridgeService_CrossChainTransfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CrossChainTransferRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BridgeServiceServer).CrossChainTransact(ctx, in)
+		return srv.(BridgeServiceServer).CrossChainTransfer(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: BridgeService_CrossChainTransact_FullMethodName,
+		FullMethod: BridgeService_CrossChainTransfer_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BridgeServiceServer).CrossChainTransact(ctx, req.(*BridgeRequest))
+		return srv.(BridgeServiceServer).CrossChainTransfer(ctx, req.(*CrossChainTransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BridgeService_ChangeTransferStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CrossChainTransferStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeServiceServer).ChangeTransferStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BridgeService_ChangeTransferStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeServiceServer).ChangeTransferStatus(ctx, req.(*CrossChainTransferStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -93,13 +119,17 @@ func _BridgeService_CrossChainTransact_Handler(srv interface{}, ctx context.Cont
 // BridgeService_ServiceDesc is the grpc.ServiceDesc for BridgeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var BridgeService_ServiceDesc = grpc.ServiceDesc {
+var BridgeService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "selaginella.proto_rpc.BridgeService",
 	HandlerType: (*BridgeServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "crossChainTransact",
-			Handler:    _BridgeService_CrossChainTransact_Handler,
+			MethodName: "crossChainTransfer",
+			Handler:    _BridgeService_CrossChainTransfer_Handler,
+		},
+		{
+			MethodName: "changeTransferStatus",
+			Handler:    _BridgeService_ChangeTransferStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/evm-layer2/selaginella/database"
+	node "github.com/evm-layer2/selaginella/eth_client"
 	"github.com/evm-layer2/selaginella/protobuf/pb"
 )
 
@@ -24,7 +25,8 @@ type RpcServerConfig struct {
 
 type RpcServer struct {
 	*RpcServerConfig
-	db *database.DB
+	db        *database.DB
+	ethClient map[uint64]node.EthClient
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
@@ -73,8 +75,15 @@ func (s *RpcServer) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *RpcServer) CrossChainTransact(ctx context.Context, in *pb.BridgeRequest) (*pb.BridgeResponse, error) {
-	return &pb.BridgeResponse{
+func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTransferRequest) (*pb.CrossChainTransferResponse, error) {
+	return &pb.CrossChainTransferResponse{
+		Success: true,
+		Message: "call cross chain transfer success",
+	}, nil
+}
+
+func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainTransferStatusRequest) (*pb.CrossChainTransferStatusResponse, error) {
+	return &pb.CrossChainTransferStatusResponse{
 		Success: true,
 		Message: "call cross chain transfer success",
 	}, nil
