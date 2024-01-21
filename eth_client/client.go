@@ -26,6 +26,7 @@ const (
 
 type EthClient interface {
 	TxReceiptByHash(common.Hash) (*types.Transaction, error)
+	SendTransaction(ctx context.Context, tx *types.Transaction) error
 	Close()
 }
 
@@ -71,6 +72,17 @@ func (c *clnt) TxReceiptByHash(hash common.Hash) (*types.Transaction, error) {
 	}
 
 	return tx, nil
+}
+
+// SendTransaction injects a signed transaction into the pending pool for execution.
+// If the transaction was a contract creation use the TransactionReceipt method to get the
+// contract address after the transaction has been mined.
+func (c *clnt) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	data, err := tx.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	return c.rpc.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(data))
 }
 
 func (c *clnt) Close() {
