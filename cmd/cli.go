@@ -21,13 +21,37 @@ var (
 		Value:   "./selaginella.yaml",
 		Aliases: []string{"c"},
 		Usage:   "path to config file",
-		EnvVars: []string{"ACORUS_CONFIG"},
+		EnvVars: []string{"SELAGINELLA_CONFIG"},
 	}
 	MigrationsFlag = &cli.StringFlag{
 		Name:    "migrations-dir",
 		Value:   "./migrations",
 		Usage:   "path to migrations folder",
-		EnvVars: []string{"ACORUS_MIGRATIONS_DIR"},
+		EnvVars: []string{"SELAGINELLA_MIGRATIONS_DIR"},
+	}
+	EnableHsmFlag = cli.BoolFlag{
+		Name:    "enable-hsm",
+		Value:   false,
+		Usage:   "Enalbe the hsm",
+		EnvVars: []string{"ENABLE_HSM"},
+	}
+	HsmAPINameFlag = cli.StringFlag{
+		Name:    "hsm-api-name",
+		Value:   "",
+		Usage:   "the api name of hsm for selaginella",
+		EnvVars: []string{"HSM_API_NAME"},
+	}
+	HsmAddressFlag = cli.StringFlag{
+		Name:    "hsm-address",
+		Value:   "",
+		Usage:   "the address of hsm key for selaginella",
+		EnvVars: []string{"HSM_ADDRESS"},
+	}
+	HsmCredenFlag = cli.StringFlag{
+		Name:    "hsm-creden",
+		Value:   "",
+		Usage:   "the creden of hsm key for selaginella",
+		EnvVars: []string{"HSM_CREDEN"},
 	}
 )
 
@@ -41,12 +65,19 @@ func runGrpcServer(ctx *cli.Context, _ context.CancelCauseFunc) (cliapp.Lifecycl
 		GrpcHostname: cfg.Server.Host,
 		GrpcPort:     strconv.Itoa(cfg.Server.Port),
 	}
+	hsmCfg := &services.HsmConfig{
+		EnableHsm:  ctx.Bool(EnableHsmFlag.Name),
+		HsmAPIName: ctx.String(HsmAPINameFlag.Name),
+		HsmCreden:  ctx.String(HsmCredenFlag.Name),
+		HsmAddress: ctx.String(HsmAddressFlag.Name),
+	}
+
 	db, err := database.NewDB(ctx.Context, cfg.Database)
 	if err != nil {
 		log.Error("failed to connect to database", "err", err)
 		return nil, err
 	}
-	return services.NewRpcServer(db, grpcServerCfg)
+	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs)
 }
 
 func runMigrations(ctx *cli.Context) error {
