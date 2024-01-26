@@ -4,11 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/evm-layer2/selaginella/bindings"
-	"github.com/evm-layer2/selaginella/common/retry"
-	"github.com/evm-layer2/selaginella/protobuf/pb"
 	"math/big"
 	"net"
 	"strconv"
@@ -18,14 +13,19 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
+	"github.com/evm-layer2/selaginella/bindings"
 	common2 "github.com/evm-layer2/selaginella/common"
+	"github.com/evm-layer2/selaginella/common/retry"
 	"github.com/evm-layer2/selaginella/config"
 	"github.com/evm-layer2/selaginella/database"
 	node "github.com/evm-layer2/selaginella/eth_client"
+	"github.com/evm-layer2/selaginella/protobuf/pb"
 	"github.com/evm-layer2/selaginella/sign"
 )
 

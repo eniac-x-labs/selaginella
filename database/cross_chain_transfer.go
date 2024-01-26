@@ -2,7 +2,6 @@ package database
 
 import (
 	"errors"
-	"github.com/evm-layer2/selaginella/protobuf/pb"
 	"math/big"
 	"time"
 
@@ -10,6 +9,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/evm-layer2/selaginella/protobuf/pb"
 )
 
 const (
