@@ -1,12 +1,20 @@
 package database
 
 import (
+	"errors"
+	"github.com/evm-layer2/selaginella/protobuf/pb"
 	"math/big"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/ethereum/go-ethereum/common"
+)
+
+const (
+	PendingStatus = 0
+	SuccessStatus = 1
 )
 
 type CrossChainTransfer struct {
@@ -17,6 +25,7 @@ type CrossChainTransfer struct {
 	TxHash              common.Hash    `gorm:"column:tx_hash;serializer:bytes" db:"tx_hash" json:"tx_hash" form:"tx_hash"`
 	SourceSenderAddress common.Address `gorm:"column:source_sender_dddress;serializer:bytes" db:"source_sender_dddress" json:"source_sender_dddress" form:"source_sender_dddress"`
 	DestReceiveAddress  common.Address `gorm:"column:dest_receive_address;serializer:bytes" db:"dest_receive_address" json:"dest_receive_address" form:"dest_receive_address"`
+	TokenAddress        common.Address `gorm:"column:token_address;serializer:bytes" db:"token_address" json:"token_address" form:"token_address"`
 	Amount              *big.Int       `gorm:"serializer:u256;column:amount" db:"amount" json:"amount" form:"amount"`
 	Status              int8           `gorm:"serializer:u256;column:status" db:"status" json:"status" form:"status"`
 	Timestamp           int64          `gorm:"column:timestamp" db:"timestamp" json:"timestamp" form:"timestamp"`
@@ -28,11 +37,13 @@ func (CrossChainTransfer) TableName() string {
 
 type CrossChainTransferDB interface {
 	CrossChainTransferView
-	StoreBatchDataStores([]CrossChainTransfer) error
+	StoreBatchCrossChainTransfer([]CrossChainTransfer) error
+	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest) CrossChainTransfer
+	ChangeCrossChainTransferStatueByTxHash(txHash string) error
 }
 
 type CrossChainTransferView interface {
-	DataStoreBlockById(txHash common.Hash) (*CrossChainTransfer, error)
+	CrossChainTransferByTxHash(txHash string) (*CrossChainTransfer, error)
 }
 
 type crossChainTransferDB struct {
@@ -43,10 +54,59 @@ func NewCrossChainTransferDB(db *gorm.DB) CrossChainTransferDB {
 	return &crossChainTransferDB{gorm: db}
 }
 
-func (c crossChainTransferDB) DataStoreBlockById(txHash common.Hash) (*CrossChainTransfer, error) {
-	panic("implement me")
+func (c crossChainTransferDB) CrossChainTransferByTxHash(txHash string) (*CrossChainTransfer, error) {
+	var crossChainTransfer CrossChainTransfer
+	result := c.gorm.Table("cross_chain_transfer").Where("tx_hash = ?", txHash).Take(&crossChainTransfer)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+
+	return &crossChainTransfer, nil
 }
 
-func (c crossChainTransferDB) StoreBatchDataStores(transfers []CrossChainTransfer) error {
-	panic("implement me")
+func (c crossChainTransferDB) ChangeCrossChainTransferStatueByTxHash(txHash string) error {
+	var crossChainTransfer CrossChainTransfer
+	result := c.gorm.Table("cross_chain_transfer").Where("tx_hash = ?", txHash).Take(&crossChainTransfer)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return result.Error
+	}
+	crossChainTransfer.Status = SuccessStatus
+	err := c.gorm.Save(&crossChainTransfer).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c crossChainTransferDB) StoreBatchCrossChainTransfer(transfers []CrossChainTransfer) error {
+	result := c.gorm.CreateInBatches(&transfers, len(transfers))
+	return result.Error
+}
+
+func (c crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransferRequest) CrossChainTransfer {
+
+	sci, _ := new(big.Int).SetString(in.SourceChainId, 10)
+	dci, _ := new(big.Int).SetString(in.DestChainId, 10)
+	amount, _ := new(big.Int).SetString(in.Amount, 10)
+
+	return CrossChainTransfer{
+		GUID:                uuid.New(),
+		SourceChainId:       sci,
+		DestChainId:         dci,
+		Fee:                 nil,
+		TxHash:              common.Hash{},
+		SourceSenderAddress: common.Address{},
+		DestReceiveAddress:  common.HexToAddress(in.ReceiveAddress),
+		TokenAddress:        common.HexToAddress(in.TokenAddress),
+		Amount:              amount,
+		Status:              PendingStatus,
+		Timestamp:           time.Now().Unix(),
+	}
 }
