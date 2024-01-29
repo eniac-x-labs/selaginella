@@ -23,6 +23,7 @@ type CrossChainTransfer struct {
 	SourceChainId       *big.Int       `gorm:"serializer:u256;column:source_chain_id" db:"source_chain_id" json:"source_chain_id" form:"source_chain_id"`
 	DestChainId         *big.Int       `gorm:"serializer:u256;column:dest_chain_id" db:"dest_chain_id" json:"dest_chain_id" form:"dest_chain_id"`
 	Fee                 *big.Int       `gorm:"serializer:u256;column:fee" db:"fee" json:"fee" form:"fee"`
+	Nonce               *big.Int       `gorm:"serializer:u256;column:nonce" db:"nonce" json:"nonce" form:"nonce"`
 	TxHash              common.Hash    `gorm:"column:tx_hash;serializer:bytes" db:"tx_hash" json:"tx_hash" form:"tx_hash"`
 	SourceSenderAddress common.Address `gorm:"column:source_sender_dddress;serializer:bytes" db:"source_sender_dddress" json:"source_sender_dddress" form:"source_sender_dddress"`
 	DestReceiveAddress  common.Address `gorm:"column:dest_receive_address;serializer:bytes" db:"dest_receive_address" json:"dest_receive_address" form:"dest_receive_address"`
@@ -39,7 +40,7 @@ func (CrossChainTransfer) TableName() string {
 type CrossChainTransferDB interface {
 	CrossChainTransferView
 	StoreBatchCrossChainTransfer([]CrossChainTransfer) error
-	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest) CrossChainTransfer
+	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash) CrossChainTransfer
 	ChangeCrossChainTransferStatueByTxHash(txHash string) error
 }
 
@@ -91,18 +92,21 @@ func (c crossChainTransferDB) StoreBatchCrossChainTransfer(transfers []CrossChai
 	return result.Error
 }
 
-func (c crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransferRequest) CrossChainTransfer {
+func (c crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash) CrossChainTransfer {
 
 	sci, _ := new(big.Int).SetString(in.SourceChainId, 10)
 	dci, _ := new(big.Int).SetString(in.DestChainId, 10)
 	amount, _ := new(big.Int).SetString(in.Amount, 10)
+	fee, _ := new(big.Int).SetString(in.Fee, 10)
+	nonce, _ := new(big.Int).SetString(in.Nonce, 10)
 
 	return CrossChainTransfer{
 		GUID:                uuid.New(),
 		SourceChainId:       sci,
 		DestChainId:         dci,
-		Fee:                 nil,
-		TxHash:              common.Hash{},
+		Fee:                 fee,
+		Nonce:               nonce,
+		TxHash:              txHash,
 		SourceSenderAddress: common.Address{},
 		DestReceiveAddress:  common.HexToAddress(in.ReceiveAddress),
 		TokenAddress:        common.HexToAddress(in.TokenAddress),

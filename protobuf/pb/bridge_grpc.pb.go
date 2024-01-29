@@ -71,6 +71,13 @@ func (UnimplementedBridgeServiceServer) ChangeTransferStatus(context.Context, *C
 	return nil, status.Errorf(codes.Unimplemented, "method ChangeTransferStatus not implemented")
 }
 
+// UnsafeBridgeServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to BridgeServiceServer will
+// result in compilation errors.
+type UnsafeBridgeServiceServer interface {
+	mustEmbedUnimplementedBridgeServiceServer()
+}
+
 func RegisterBridgeServiceServer(s grpc.ServiceRegistrar, srv BridgeServiceServer) {
 	s.RegisterService(&BridgeService_ServiceDesc, srv)
 }

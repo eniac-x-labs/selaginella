@@ -14,6 +14,8 @@ message CrossChainTransferRequest {
   string receive_address = 3;
   string amount = 4;
   string token_address = 5;
+  string fee = 6;
+  string nonce = 7;
 }
 
 message CrossChainTransferResponse {

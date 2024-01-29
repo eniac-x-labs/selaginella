@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -50,8 +49,8 @@ type RpcServer struct {
 	ethClients          map[uint64]node.EthClient
 	RawL1BridgeContract *bind.BoundContract
 	RawL2BridgeContract map[uint64]*bind.BoundContract
-	L1BridgeContract    *bindings.L1Pool
-	L2BridgeContract    map[uint64]*bindings.L2Pool
+	L1BridgeContract    *bindings.L1PoolManager
+	L2BridgeContract    map[uint64]*bindings.L2PoolManager
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
@@ -70,8 +69,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
-	var l1BridgeContract *bindings.L1Pool
-	l2BridgeContracts := make(map[uint64]*bindings.L2Pool)
+	var l1BridgeContract *bindings.L1PoolManager
+	l2BridgeContracts := make(map[uint64]*bindings.L2PoolManager)
 	for i := range chainRpcCfg {
 		if chainRpcCfg[i].ChainId == 1 {
 			client, err := node.DialEthClient(ctx, chainRpcCfg[i].RpcUrl)
@@ -82,7 +81,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			ethClients[chainRpcCfg[i].ChainId] = client
 
 			l1Parsed, err := abi.JSON(strings.NewReader(
-				bindings.L1PoolABI,
+				bindings.L1PoolManagerABI,
 			))
 			if err != nil {
 				log.Error("selaginella parse l1 pool contract abi fail", "err", err)
@@ -96,7 +95,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			)
 			rawL1BridgeContract = rawL1PoolContract
 
-			l1PoolContract, err := bindings.NewL1Pool(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1Client)
+			l1PoolContract, err := bindings.NewL1PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1Client)
 			l1BridgeContract = l1PoolContract
 
 		} else {
@@ -108,7 +107,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			ethClients[chainRpcCfg[i].ChainId] = client
 
 			l2Parsed, err := abi.JSON(strings.NewReader(
-				bindings.L2PoolABI,
+				bindings.L2PoolManagerABI,
 			))
 			if err != nil {
 				log.Error("selaginella parse l2 pool contract abi fail", "err", err)
@@ -122,7 +121,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			)
 			rawL2BridgeContracts[chainRpcCfg[i].ChainId] = rawL2PoolContract
 
-			l2PoolContract, err := bindings.NewL2Pool(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l2Client)
+			l2PoolContract, err := bindings.NewL2PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l2Client)
 			l2BridgeContracts[chainRpcCfg[i].ChainId] = l2PoolContract
 		}
 
@@ -179,8 +178,12 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 	var crossChainTransfers []database.CrossChainTransfer
 
 	for chainId, client := range s.ethClients {
-		destChainId, _ := strconv.ParseUint(in.DestChainId, 10, 64)
-		if chainId == destChainId {
+		sourceChainId, _ := new(big.Int).SetString(in.SourceChainId, 10)
+		destChainId, _ := new(big.Int).SetString(in.DestChainId, 10)
+		amount, _ := new(big.Int).SetString(in.Amount, 10)
+		fee, _ := new(big.Int).SetString(in.Fee, 10)
+		nonce, _ := new(big.Int).SetString(in.Nonce, 10)
+		if chainId == destChainId.Uint64() {
 			if s.EnableHsm {
 				opts, err = sign.NewHSMTransactOpts(ctx, s.HsmAPIName,
 					s.HsmAddress, new(big.Int).SetUint64(chainId), s.HsmCreden)
@@ -188,14 +191,19 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 
 			switch in.TokenAddress {
 			case common2.ETH:
-				tx, err = s.L1BridgeContract.DepositAndStakingETH(opts)
+				tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
+				if err != nil {
+					log.Error("get bridge transaction by abi fail", "error", err)
+					return nil, err
+				}
+			case common2.WETH:
+				tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
 				if err != nil {
 					log.Error("get bridge transaction by abi fail", "error", err)
 					return nil, err
 				}
 			default:
-				amount, _ := new(big.Int).SetString(in.Amount, 10)
-				tx, err = s.L1BridgeContract.DepositAndStarkingERC20(opts, common.HexToAddress(in.TokenAddress), amount)
+				tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
 				if err != nil {
 					log.Error("get bridge transaction by abi fail", "error", err)
 					return nil, err
@@ -212,7 +220,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 			if err != nil {
 				log.Error("send bridge transaction fail", "error", err)
 			}
-			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in)
+			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, finalTx.Hash())
 			crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
 		}
 

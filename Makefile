@@ -11,8 +11,8 @@ MAIN_PATH=./cmd
 # Binary names
 BINARY_NAME=selaginella
 
-L1POOL_ABI_ARTIFACT := bindings/abi/L1Pool.json
-L2POOL_ABI_ARTIFACT := bindings/abi/L2Pool.json
+L1POOL_ABI_ARTIFACT := bindings/abi/L1PoolManager.json
+L2POOL_ABI_ARTIFACT := bindings/abi/L2PoolManager.json
 
 all: test build
 
@@ -42,8 +42,8 @@ binding-l1p:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_l1_pool.go \
-	--type L1Pool \
+	--out bindings/bvm_l1_pool_manager.go \
+	--type L1PoolManager \
 	--bin $(temp)
 
 	rm $(temp)
@@ -58,8 +58,8 @@ binding-l2p:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_l2_pool.go \
-	--type L2Pool \
+	--out bindings/bvm_l2_pool_manager.go \
+	--type L2PoolManager \
 	--bin $(temp)
 
 	rm $(temp)
