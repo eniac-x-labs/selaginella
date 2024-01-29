@@ -2,17 +2,22 @@ package node
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/evm-layer2/selaginella/eth_client/retry"
@@ -167,4 +172,25 @@ func IsURLAvailable(address string) bool {
 	}
 	conn.Close()
 	return true
+}
+
+func DialEthClientWithTimeout(ctx context.Context, url string, disableHTTP2 bool) (
+	*ethclient.Client, error) {
+	ctxt, cancel := context.WithTimeout(ctx, defaultDialTimeout)
+	defer cancel()
+	if strings.HasPrefix(url, "http") {
+		httpClient := new(http.Client)
+		if disableHTTP2 {
+			log.Debug("Disabled HTTP/2 support in  eth client")
+			httpClient.Transport = &http.Transport{
+				TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+			}
+		}
+		rpcClient, err := rpc.DialHTTPWithClient(url, httpClient)
+		if err != nil {
+			return nil, err
+		}
+		return ethclient.NewClient(rpcClient), nil
+	}
+	return ethclient.DialContext(ctxt, url)
 }
