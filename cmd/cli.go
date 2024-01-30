@@ -33,25 +33,25 @@ var (
 		Name:    "enable-hsm",
 		Value:   false,
 		Usage:   "Enalbe the hsm",
-		EnvVars: []string{"ENABLE_HSM"},
+		EnvVars: []string{"SELAGINELLA_ENABLE_HSM"},
 	}
 	HsmAPINameFlag = cli.StringFlag{
 		Name:    "hsm-api-name",
 		Value:   "",
 		Usage:   "the api name of hsm for selaginella",
-		EnvVars: []string{"HSM_API_NAME"},
+		EnvVars: []string{"SELAGINELLA_HSM_API_NAME"},
 	}
 	HsmAddressFlag = cli.StringFlag{
 		Name:    "hsm-address",
 		Value:   "",
 		Usage:   "the address of hsm key for selaginella",
-		EnvVars: []string{"HSM_ADDRESS"},
+		EnvVars: []string{"SELAGINELLA_HSM_ADDRESS"},
 	}
 	HsmCredenFlag = cli.StringFlag{
 		Name:    "hsm-creden",
 		Value:   "",
 		Usage:   "the creden of hsm key for selaginella",
-		EnvVars: []string{"HSM_CREDEN"},
+		EnvVars: []string{"SELAGINELLA_HSM_CREDEN"},
 	}
 )
 
