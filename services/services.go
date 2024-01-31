@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -9,6 +11,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	kms "cloud.google.com/go/kms/apiv1"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -54,6 +58,7 @@ type RpcServer struct {
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
+	privateKey *ecdsa.PrivateKey
 }
 
 func (s *RpcServer) Stop(ctx context.Context) error {
@@ -65,7 +70,7 @@ func (s *RpcServer) Stopped() bool {
 	return s.stopped.Load()
 }
 
-func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC) (*RpcServer, error) {
+func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey) (*RpcServer, error) {
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
@@ -136,6 +141,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		RawL2BridgeContract: rawL2BridgeContracts,
 		L1BridgeContract:    l1BridgeContract,
 		L2BridgeContract:    l2BridgeContracts,
+		privateKey:          priKey,
 	}, nil
 }
 
@@ -185,8 +191,34 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		nonce, _ := new(big.Int).SetString(in.Nonce, 10)
 		if chainId == destChainId.Uint64() {
 			if s.EnableHsm {
-				opts, err = sign.NewHSMTransactOpts(ctx, s.HsmAPIName,
-					s.HsmAddress, new(big.Int).SetUint64(chainId), s.HsmCreden)
+				seqBytes, err := hex.DecodeString(s.HsmCreden)
+				if err != nil {
+					log.Crit("selaginella", "decode hsm creden fail", err.Error())
+				}
+				apikey := option.WithCredentialsJSON(seqBytes)
+				client, err := kms.NewKeyManagementClient(context.Background(), apikey)
+				if err != nil {
+					log.Crit("selaginella", "create signer error", err.Error())
+				}
+				mk := &sign.ManagedKey{
+					KeyName:      s.HsmAPIName,
+					EthereumAddr: common.HexToAddress(s.HsmAddress),
+					Gclient:      client,
+				}
+				opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), new(big.Int).SetUint64(chainId))
+				if err != nil {
+					log.Crit("selaginella", "create signer error", err.Error())
+				}
+			} else {
+				if s.privateKey == nil {
+					log.Crit("selaginella", "create signer error", err.Error())
+					return nil, errors.New("no private key provided")
+				}
+
+				opts, err = bind.NewKeyedTransactorWithChainID(s.privateKey, new(big.Int).SetUint64(chainId))
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			switch in.TokenAddress {

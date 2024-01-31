@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 
@@ -53,6 +57,11 @@ var (
 		Usage:   "the creden of hsm key for selaginella",
 		EnvVars: []string{"SELAGINELLA_HSM_CREDEN"},
 	}
+	PrivateKeyFlag = cli.StringFlag{
+		Name:    "private-key",
+		Usage:   "Private Key corresponding to selaginella",
+		EnvVars: []string{"SELAGINELLA_PRIVATE_KEY"},
+	}
 )
 
 func runGrpcServer(ctx *cli.Context, _ context.CancelCauseFunc) (cliapp.Lifecycle, error) {
@@ -72,12 +81,23 @@ func runGrpcServer(ctx *cli.Context, _ context.CancelCauseFunc) (cliapp.Lifecycl
 		HsmAddress: ctx.String(HsmAddressFlag.Name),
 	}
 
+	var priKey *ecdsa.PrivateKey
+	if ctx.IsSet(PrivateKeyFlag.Name) {
+		hex := ctx.String(PrivateKeyFlag.Name)
+		hex = strings.TrimPrefix(hex, "0x")
+		key, err := crypto.HexToECDSA(hex)
+		if err != nil {
+			log.Error(fmt.Sprintf("Option %q: %v", PrivateKeyFlag.Name, err))
+		}
+		priKey = key
+	}
+
 	db, err := database.NewDB(ctx.Context, cfg.Database)
 	if err != nil {
 		log.Error("failed to connect to database", "err", err)
 		return nil, err
 	}
-	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs)
+	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey)
 }
 
 func runMigrations(ctx *cli.Context) error {
