@@ -46,7 +46,7 @@ func NewManagedKey(ctx context.Context, client *kms.KeyManagementClient, address
 
 // NewEthereumTransactor returns a KMS-backed instance. Ctx applies to the
 // entire lifespan of the bind.TransactOpts.
-func (mk *ManagedKey) NewEthereumTransactorrWithChainID(ctx context.Context, chainID *big.Int) (*bind.TransactOpts, error) {
+func (mk *ManagedKey) NewEthereumTransactorWithChainID(ctx context.Context, chainID *big.Int) (*bind.TransactOpts, error) {
 	if chainID == nil {
 		return nil, bind.ErrNoChainID
 	}
@@ -172,6 +172,6 @@ func NewHSMTransactOpts(ctx context.Context, hsmAPIName string, hsmAddress strin
 		EthereumAddr: common.HexToAddress(hsmAddress),
 		Gclient:      client,
 	}
-	opts, err := mk.NewEthereumTransactorrWithChainID(ctx, chainID)
+	opts, err := mk.NewEthereumTransactorWithChainID(ctx, chainID)
 	return opts, nil
 }
