@@ -59,6 +59,7 @@ type RpcServer struct {
 	stopped atomic.Bool
 	pb.BridgeServiceServer
 	privateKey *ecdsa.PrivateKey
+	l1ChainID  uint64
 }
 
 func (s *RpcServer) Stop(ctx context.Context) error {
@@ -70,14 +71,14 @@ func (s *RpcServer) Stopped() bool {
 	return s.stopped.Load()
 }
 
-func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey) (*RpcServer, error) {
+func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, l1ChainID uint64) (*RpcServer, error) {
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
 	var l1BridgeContract *bindings.L1PoolManager
 	l2BridgeContracts := make(map[uint64]*bindings.L2PoolManager)
 	for i := range chainRpcCfg {
-		if chainRpcCfg[i].ChainId == 1 {
+		if chainRpcCfg[i].ChainId == l1ChainID {
 			client, err := node.DialEthClient(ctx, chainRpcCfg[i].RpcUrl)
 			if err != nil {
 				log.Error("dial client fail", "error", err.Error())
@@ -142,6 +143,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		L1BridgeContract:    l1BridgeContract,
 		L2BridgeContract:    l2BridgeContracts,
 		privateKey:          priKey,
+		l1ChainID:           l1ChainID,
 	}, nil
 }
 
@@ -196,14 +198,14 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 					log.Crit("selaginella", "decode hsm creden fail", err.Error())
 				}
 				apikey := option.WithCredentialsJSON(seqBytes)
-				client, err := kms.NewKeyManagementClient(context.Background(), apikey)
+				kClient, err := kms.NewKeyManagementClient(context.Background(), apikey)
 				if err != nil {
 					log.Crit("selaginella", "create signer error", err.Error())
 				}
 				mk := &sign.ManagedKey{
 					KeyName:      s.HsmAPIName,
 					EthereumAddr: common.HexToAddress(s.HsmAddress),
-					Gclient:      client,
+					Gclient:      kClient,
 				}
 				opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), new(big.Int).SetUint64(chainId))
 				if err != nil {
@@ -223,22 +225,47 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 
 			switch in.TokenAddress {
 			case common2.ETH:
-				tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
-				if err != nil {
-					log.Error("get bridge transaction by abi fail", "error", err)
-					return nil, err
+				if chainId == s.l1ChainID {
+					tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
+					if err != nil {
+						log.Error("get bridge transaction by abi fail", "error", err)
+						return nil, err
+					}
+				} else {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
+					if err != nil {
+						log.Error("get bridge transaction by abi fail", "error", err)
+						return nil, err
+					}
 				}
 			case common2.WETH:
-				tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
-				if err != nil {
-					log.Error("get bridge transaction by abi fail", "error", err)
-					return nil, err
+				if chainId == s.l1ChainID {
+					tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
+					if err != nil {
+						log.Error("get bridge transaction by abi fail", "error", err)
+						return nil, err
+					}
+				} else {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
+					if err != nil {
+						log.Error("get bridge transaction by abi fail", "error", err)
+						return nil, err
+					}
 				}
+
 			default:
-				tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
-				if err != nil {
-					log.Error("get bridge transaction by abi fail", "error", err)
-					return nil, err
+				if chainId == s.l1ChainID {
+					tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
+					if err != nil {
+						log.Error("get bridge transaction by abi fail", "error", err)
+						return nil, err
+					}
+				} else {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
+					if err != nil {
+						log.Error("get bridge transaction by abi fail", "error", err)
+						return nil, err
+					}
 				}
 			}
 

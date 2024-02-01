@@ -62,6 +62,11 @@ var (
 		Usage:   "Private Key corresponding to selaginella",
 		EnvVars: []string{"SELAGINELLA_PRIVATE_KEY"},
 	}
+	L1ChainIDFlag = cli.Uint64Flag{
+		Name:    "l1-chain-id",
+		Usage:   "L1 Chain ID",
+		EnvVars: []string{"SELAGINELLA_L1_CHAIN_ID"},
+	}
 )
 
 func runGrpcServer(ctx *cli.Context, _ context.CancelCauseFunc) (cliapp.Lifecycle, error) {
@@ -97,7 +102,10 @@ func runGrpcServer(ctx *cli.Context, _ context.CancelCauseFunc) (cliapp.Lifecycl
 		log.Error("failed to connect to database", "err", err)
 		return nil, err
 	}
-	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey)
+
+	l1ChainID := ctx.Uint64(L1ChainIDFlag.Name)
+
+	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, l1ChainID)
 }
 
 func runMigrations(ctx *cli.Context) error {
