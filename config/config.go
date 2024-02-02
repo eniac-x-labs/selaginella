@@ -23,14 +23,22 @@ type RPC struct {
 	RpcUrl              string `yaml:"rpc_url"`
 	ChainId             uint64 `yaml:"chain_id"`
 	FoundingPoolAddress string `yaml:"founding_pool_address"`
+	EthAddress          string `yaml:"eth_address"`
+	WEthAddress         string `yaml:"weth_address"`
+	USDTAddress         string `yaml:"usdt_address"`
+}
+
+type Exporter struct {
+	ExportAddress string
 }
 
 type Config struct {
-	Migrations string `yaml:"migrations"`
-	Server     Server `yaml:"server"`
-	RPCs       []*RPC `yaml:"rpcs"`
-	Metrics    Server `yaml:"metrics"`
-	Database   DB     `yaml:"database"`
+	Migrations string   `yaml:"migrations"`
+	Server     Server   `yaml:"server"`
+	RPCs       []*RPC   `yaml:"rpcs"`
+	Metrics    Server   `yaml:"metrics"`
+	Database   DB       `yaml:"database"`
+	Exporter   Exporter `yaml:"exporter"`
 }
 
 func NewConfig(path string) (*Config, error) {
