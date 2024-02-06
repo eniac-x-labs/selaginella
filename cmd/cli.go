@@ -16,6 +16,7 @@ import (
 	"github.com/evm-layer2/selaginella/common/cliapp"
 	"github.com/evm-layer2/selaginella/config"
 	"github.com/evm-layer2/selaginella/database"
+	"github.com/evm-layer2/selaginella/exporter"
 	"github.com/evm-layer2/selaginella/services"
 )
 
@@ -66,6 +67,16 @@ var (
 		Name:    "l1-chain-id",
 		Usage:   "L1 Chain ID",
 		EnvVars: []string{"SELAGINELLA_L1_CHAIN_ID"},
+	}
+	L1TransferMultipleFlag = cli.Uint64Flag{
+		Name:    "l1-transfer-multiple",
+		Usage:   "The corresponding capital multiple is transferred into l1",
+		EnvVars: []string{"SELAGINELLA_L1_TRANSFER_MULTIPLE"},
+	}
+	L2TransferMultipleFlag = cli.Uint64Flag{
+		Name:    "l2-transfer-multiple",
+		Usage:   "The corresponding capital multiple is transferred into l2",
+		EnvVars: []string{"SELAGINELLA_L2_TRANSFER_MULTIPLE"},
 	}
 )
 
@@ -129,6 +140,49 @@ func runMigrations(ctx *cli.Context) error {
 	return db.ExecuteSQLMigration(ctx.String(MigrationsFlag.Name))
 }
 
+func runExporter(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lifecycle, error) {
+	cfg, err := config.NewConfig(ctx.String(ConfigFlag.Name))
+	if err != nil {
+		log.Error("failed to load config", "err", err)
+		return nil, err
+	}
+
+	db, err := database.NewDB(ctx.Context, cfg.Database)
+	if err != nil {
+		log.Error("failed to connect to database", "err", err)
+		return nil, err
+	}
+
+	var priKey *ecdsa.PrivateKey
+	if ctx.IsSet(PrivateKeyFlag.Name) {
+		hex := ctx.String(PrivateKeyFlag.Name)
+		hex = strings.TrimPrefix(hex, "0x")
+		key, err := crypto.HexToECDSA(hex)
+		if err != nil {
+			log.Error(fmt.Sprintf("Option %q: %v", PrivateKeyFlag.Name, err))
+		}
+		priKey = key
+	}
+
+	hsmCfg := &exporter.HsmConfig{
+		EnableHsm:  ctx.Bool(EnableHsmFlag.Name),
+		HsmAPIName: ctx.String(HsmAPINameFlag.Name),
+		HsmCreden:  ctx.String(HsmCredenFlag.Name),
+		HsmAddress: ctx.String(HsmAddressFlag.Name),
+	}
+
+	MultipleCfg := &exporter.TransferMultiple{
+		L1Multiple: ctx.Uint64(L1TransferMultipleFlag.Name),
+		L2Multiple: ctx.Uint64(L2TransferMultipleFlag.Name),
+	}
+
+	l1ChainID := ctx.Uint64(L1ChainIDFlag.Name)
+
+	log.Info("running exporter...")
+
+	return exporter.NewExporter(ctx.Context, cfg.Exporter, hsmCfg, db, cfg.RPCs, shutdown, priKey, l1ChainID, MultipleCfg)
+}
+
 func newCli(GitCommit string, GitDate string) *cli.App {
 	flags := []cli.Flag{ConfigFlag}
 	migrationFlags := []cli.Flag{MigrationsFlag, ConfigFlag}
@@ -142,6 +196,12 @@ func newCli(GitCommit string, GitDate string) *cli.App {
 				Flags:       flags,
 				Description: "Runs the grpc service",
 				Action:      cliapp.LifecycleCmd(runGrpcServer),
+			},
+			{
+				Name:        "exporter",
+				Flags:       flags,
+				Description: "Runs the exporter service",
+				Action:      cliapp.LifecycleCmd(runExporter),
 			},
 			{
 				Name:        "migrate",

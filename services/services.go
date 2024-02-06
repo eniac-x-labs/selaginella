@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/evm-layer2/selaginella/bindings"
-	common2 "github.com/evm-layer2/selaginella/common"
 	"github.com/evm-layer2/selaginella/common/retry"
 	"github.com/evm-layer2/selaginella/config"
 	"github.com/evm-layer2/selaginella/database"
@@ -55,6 +54,8 @@ type RpcServer struct {
 	RawL2BridgeContract map[uint64]*bind.BoundContract
 	L1BridgeContract    *bindings.L1PoolManager
 	L2BridgeContract    map[uint64]*bindings.L2PoolManager
+	EthAddress          map[uint64]common.Address
+	WEthAddress         map[uint64]common.Address
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
@@ -77,6 +78,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
 	var l1BridgeContract *bindings.L1PoolManager
 	l2BridgeContracts := make(map[uint64]*bindings.L2PoolManager)
+	EthAddress := make(map[uint64]common.Address)
+	WEthAddress := make(map[uint64]common.Address)
 	for i := range chainRpcCfg {
 		if chainRpcCfg[i].ChainId == l1ChainID {
 			client, err := node.DialEthClient(ctx, chainRpcCfg[i].RpcUrl)
@@ -103,6 +106,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 
 			l1PoolContract, err := bindings.NewL1PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1Client)
 			l1BridgeContract = l1PoolContract
+			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)
+			WEthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].WEthAddress)
 
 		} else {
 			client, err := node.DialEthClient(ctx, chainRpcCfg[i].RpcUrl)
@@ -129,6 +134,9 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 
 			l2PoolContract, err := bindings.NewL2PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l2Client)
 			l2BridgeContracts[chainRpcCfg[i].ChainId] = l2PoolContract
+			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)
+			WEthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].WEthAddress)
+
 		}
 
 	}
@@ -142,6 +150,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		RawL2BridgeContract: rawL2BridgeContracts,
 		L1BridgeContract:    l1BridgeContract,
 		L2BridgeContract:    l2BridgeContracts,
+		EthAddress:          EthAddress,
+		WEthAddress:         WEthAddress,
 		privateKey:          priKey,
 		l1ChainID:           l1ChainID,
 	}, nil
@@ -166,7 +176,7 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		reflection.Register(gs)
 		pb.RegisterBridgeServiceServer(gs, s)
 
-		log.Info("grp info", "port", s.GrpcPort, "address", listener.Addr().String())
+		log.Info("grpc info", "port", s.GrpcPort, "address", listener.Addr().String())
 		if err := gs.Serve(listener); err != nil {
 			log.Error("Could not GRPC server")
 		}
@@ -224,7 +234,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 			}
 
 			switch in.TokenAddress {
-			case common2.ETH:
+			case s.EthAddress[chainId].String():
 				if chainId == s.l1ChainID {
 					tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
 					if err != nil {
@@ -238,7 +248,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 						return nil, err
 					}
 				}
-			case common2.WETH:
+			case s.WEthAddress[chainId].String():
 				if chainId == s.l1ChainID {
 					tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
 					if err != nil {

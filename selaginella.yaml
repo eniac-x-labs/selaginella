@@ -7,23 +7,39 @@ metrics:
   port: 8081
 
 rpcs:
-  - rpc_url: 'https://rpc.ankr.com/eth/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
-    chain_id: 1
-    founding_pool_address: '0x000'
+  - rpc_url: 'https://rpc.ankr.com/eth_sepolia/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+    chain_id: 11155111
+    founding_pool_address: '0xAC13457009a2aE49820Bd7517818436dE2202549'
+    eth_address: ''
+    weth_address: ''
+    usdt_address: ''
 
-  - rpc_url: 'https://rpc.ankr.com/scroll/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
-    chain_id: 534352
-    founding_pool_address: '0x000'
+  - rpc_url: 'https://rpc.ankr.com/scroll_sepolia_testnet/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+    chain_id: 534351
+    founding_pool_address: '0x03C43a778A4157c8781aA1bc645F2703B224b9d8'
+    eth_address: ''
+    weth_address: ''
+    usdt_address: ''
 
-  - rpc_url: 'https://rpc.ankr.com/polygon_zkevm/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
-    chain_id: 1101
-    founding_pool_address: '0x000'
+  - rpc_url: 'https://rpc.ankr.com/polygon_zkevm_testnet/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+    chain_id: 1442
+    founding_pool_address: '0x03C43a778A4157c8781aA1bc645F2703B224b9d8'
+    eth_address: ''
+    weth_address: ''
+    usdt_address: ''
+
+  - rpc_url: 'https://rpc.ankr.com/optimism_sepolia/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+    chain_id: 11155420
+    founding_pool_address: '0x03C43a778A4157c8781aA1bc645F2703B224b9d8'
+    eth_address: ''
+    weth_address: ''
+    usdt_address: ''
 
 database:
-  db_host: "127.0.0.1"
+  db_host: "120.77.251.247"
   db_port: 5432
-  db_user: "graphnode"
-  db_password: ""
+  db_user: "postgres"
+  db_password: "galamini"
   db_name: "selaginella"
 
 
