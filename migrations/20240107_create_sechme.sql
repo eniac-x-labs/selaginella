@@ -27,5 +27,5 @@ CREATE TABLE IF NOT EXISTS cross_chain_transfer (
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_timestamp ON cross_chain_transfer(timestamp);
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_tx_hash ON cross_chain_transfer(tx_hash);
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_source_sender_address ON cross_chain_transfer(source_sender_address);
-CREATE INDEX IF NOT EXISTS cross_chain_transfer_dest_receive_address ON cross_chain_transfer(source_dest_address);
+CREATE INDEX IF NOT EXISTS cross_chain_transfer_dest_receive_address ON cross_chain_transfer(dest_receive_address);
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_token_address ON cross_chain_transfer(token_address);

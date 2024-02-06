@@ -3,6 +3,7 @@ selaginella
 
 # Configuration file
 *.toml
+.env
 
 #IDE
 .idea
