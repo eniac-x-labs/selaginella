@@ -34,46 +34,46 @@ var (
 		Usage:   "path to migrations folder",
 		EnvVars: []string{"SELAGINELLA_MIGRATIONS_DIR"},
 	}
-	EnableHsmFlag = cli.BoolFlag{
+	EnableHsmFlag = &cli.BoolFlag{
 		Name:    "enable-hsm",
 		Value:   false,
 		Usage:   "Enalbe the hsm",
 		EnvVars: []string{"SELAGINELLA_ENABLE_HSM"},
 	}
-	HsmAPINameFlag = cli.StringFlag{
+	HsmAPINameFlag = &cli.StringFlag{
 		Name:    "hsm-api-name",
 		Value:   "",
 		Usage:   "the api name of hsm for selaginella",
 		EnvVars: []string{"SELAGINELLA_HSM_API_NAME"},
 	}
-	HsmAddressFlag = cli.StringFlag{
+	HsmAddressFlag = &cli.StringFlag{
 		Name:    "hsm-address",
 		Value:   "",
 		Usage:   "the address of hsm key for selaginella",
 		EnvVars: []string{"SELAGINELLA_HSM_ADDRESS"},
 	}
-	HsmCredenFlag = cli.StringFlag{
+	HsmCredenFlag = &cli.StringFlag{
 		Name:    "hsm-creden",
 		Value:   "",
 		Usage:   "the creden of hsm key for selaginella",
 		EnvVars: []string{"SELAGINELLA_HSM_CREDEN"},
 	}
-	PrivateKeyFlag = cli.StringFlag{
+	PrivateKeyFlag = &cli.StringFlag{
 		Name:    "private-key",
 		Usage:   "Private Key corresponding to selaginella",
 		EnvVars: []string{"SELAGINELLA_PRIVATE_KEY"},
 	}
-	L1ChainIDFlag = cli.Uint64Flag{
+	L1ChainIDFlag = &cli.Uint64Flag{
 		Name:    "l1-chain-id",
 		Usage:   "L1 Chain ID",
 		EnvVars: []string{"SELAGINELLA_L1_CHAIN_ID"},
 	}
-	L1TransferMultipleFlag = cli.Uint64Flag{
+	L1TransferMultipleFlag = &cli.Uint64Flag{
 		Name:    "l1-transfer-multiple",
 		Usage:   "The corresponding capital multiple is transferred into l1",
 		EnvVars: []string{"SELAGINELLA_L1_TRANSFER_MULTIPLE"},
 	}
-	L2TransferMultipleFlag = cli.Uint64Flag{
+	L2TransferMultipleFlag = &cli.Uint64Flag{
 		Name:    "l2-transfer-multiple",
 		Usage:   "The corresponding capital multiple is transferred into l2",
 		EnvVars: []string{"SELAGINELLA_L2_TRANSFER_MULTIPLE"},
@@ -184,8 +184,9 @@ func runExporter(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lif
 }
 
 func newCli(GitCommit string, GitDate string) *cli.App {
-	flags := []cli.Flag{ConfigFlag}
+	flags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1ChainIDFlag}
 	migrationFlags := []cli.Flag{MigrationsFlag, ConfigFlag}
+	exporterFlags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1ChainIDFlag, L1TransferMultipleFlag, L2TransferMultipleFlag}
 	return &cli.App{
 		Version:              params.VersionWithCommit(GitCommit, GitDate),
 		Description:          "An indexer of all mantle da block data with a serving grpc api layer",
@@ -199,7 +200,7 @@ func newCli(GitCommit string, GitDate string) *cli.App {
 			},
 			{
 				Name:        "exporter",
-				Flags:       flags,
+				Flags:       exporterFlags,
 				Description: "Runs the exporter service",
 				Action:      cliapp.LifecycleCmd(runExporter),
 			},

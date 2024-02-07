@@ -206,12 +206,12 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 			if s.EnableHsm {
 				seqBytes, err := hex.DecodeString(s.HsmCreden)
 				if err != nil {
-					log.Crit("selaginella", "decode hsm creden fail", err.Error())
+					log.Error("selaginella", "decode hsm creden fail", err.Error())
 				}
 				apikey := option.WithCredentialsJSON(seqBytes)
 				kClient, err := kms.NewKeyManagementClient(context.Background(), apikey)
 				if err != nil {
-					log.Crit("selaginella", "create signer error", err.Error())
+					log.Error("selaginella", "create signer error", err.Error())
 				}
 				mk := &sign.ManagedKey{
 					KeyName:      s.HsmAPIName,
@@ -220,11 +220,11 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				}
 				opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), new(big.Int).SetUint64(chainId))
 				if err != nil {
-					log.Crit("selaginella", "create signer error", err.Error())
+					log.Error("selaginella", "create signer error", err.Error())
 				}
 			} else {
 				if s.privateKey == nil {
-					log.Crit("selaginella", "create signer error", err.Error())
+					log.Error("selaginella", "create signer error", err.Error())
 					return nil, errors.New("no private key provided")
 				}
 
