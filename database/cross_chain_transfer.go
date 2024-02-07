@@ -19,13 +19,13 @@ const (
 )
 
 type CrossChainTransfer struct {
-	GUID                uuid.UUID      `gorm:"primaryKey" json:"guid"`
+	GUID                uuid.UUID      `gorm:"primaryKey;DEFAULT replace(uuid_generate_v4()::text,'-','')" json:"guid"`
 	SourceChainId       *big.Int       `gorm:"serializer:u256;column:source_chain_id" db:"source_chain_id" json:"source_chain_id" form:"source_chain_id"`
 	DestChainId         *big.Int       `gorm:"serializer:u256;column:dest_chain_id" db:"dest_chain_id" json:"dest_chain_id" form:"dest_chain_id"`
 	Fee                 *big.Int       `gorm:"serializer:u256;column:fee" db:"fee" json:"fee" form:"fee"`
 	Nonce               *big.Int       `gorm:"serializer:u256;column:nonce" db:"nonce" json:"nonce" form:"nonce"`
 	TxHash              common.Hash    `gorm:"column:tx_hash;serializer:bytes" db:"tx_hash" json:"tx_hash" form:"tx_hash"`
-	SourceSenderAddress common.Address `gorm:"column:source_sender_dddress;serializer:bytes" db:"source_sender_dddress" json:"source_sender_dddress" form:"source_sender_dddress"`
+	SourceSenderAddress common.Address `gorm:"column:source_sender_address;serializer:bytes" db:"source_sender_address" json:"source_sender_address" form:"source_sender_address"`
 	DestReceiveAddress  common.Address `gorm:"column:dest_receive_address;serializer:bytes" db:"dest_receive_address" json:"dest_receive_address" form:"dest_receive_address"`
 	TokenAddress        common.Address `gorm:"column:token_address;serializer:bytes" db:"token_address" json:"token_address" form:"token_address"`
 	Amount              *big.Int       `gorm:"serializer:u256;column:amount" db:"amount" json:"amount" form:"amount"`

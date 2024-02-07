@@ -1,9 +1,9 @@
 server:
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 8080
 
 metrics:
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 8081
 
 rpcs:
@@ -15,27 +15,27 @@ rpcs:
 
   - rpc_url: 'https://rpc.ankr.com/scroll_sepolia_testnet/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
     chain_id: 534351
-    founding_pool_address: '0x03C43a778A4157c8781aA1bc645F2703B224b9d8'
+    founding_pool_address: '0xd01c12c59647f8eAD076c511fd681cc3a81E36d4'
     weth_address: '0x5300000000000000000000000000000000000004'
     usdt_address: ''
 
-  - rpc_url: 'https://rpc.ankr.com/polygon_zkevm_testnet/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+  - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
     chain_id: 1442
-    founding_pool_address: '0x03C43a778A4157c8781aA1bc645F2703B224b9d8'
+    founding_pool_address: '0xeC9F0cB0c61ea321491F5EB1B77c0C499F986f35'
     weth_address: ''
     usdt_address: ''
 
   - rpc_url: 'https://rpc.ankr.com/optimism_sepolia/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
     chain_id: 11155420
-    founding_pool_address: '0x03C43a778A4157c8781aA1bc645F2703B224b9d8'
+    founding_pool_address: '0xD35480743Dd58B70e752B109A09bE54eEb5e4a70'
     weth_address: '0x4200000000000000000000000000000000000006'
     usdt_address: ''
 
 database:
-  db_host: "120.77.251.247"
+  db_host: "127.0.0.1"
   db_port: 5432
   db_user: "postgres"
-  db_password: "galamini"
+  db_password: "postgres"
   db_name: "selaginella"
 
 

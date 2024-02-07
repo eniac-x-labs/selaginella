@@ -28,7 +28,7 @@ const (
 	defaultDialTimeout     = 5 * time.Second
 	defaultDialAttempts    = 5
 	defaultRequestTimeout  = 10 * time.Second
-	defaultWaitTransaction = 30 * time.Second
+	defaultWaitTransaction = 5 * time.Minute
 )
 
 type EthClient interface {

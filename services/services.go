@@ -10,6 +10,7 @@ import (
 	"net"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	kms "cloud.google.com/go/kms/apiv1"
 	"google.golang.org/api/option"
@@ -235,6 +236,9 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				}
 			}
 
+			opts.Context = ctx
+			opts.NoSend = true
+
 			switch in.TokenAddress {
 			case s.EthAddress[chainId].String():
 				if chainId == s.l1ChainID {
@@ -290,15 +294,19 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 			err = client.SendTransaction(ctx, finalTx)
 			if err != nil {
 				log.Error("send bridge transaction fail", "error", err)
+				return nil, err
 			}
 
+			log.Info("wait tx send")
+			time.Sleep(30 * time.Second)
 			receipt, err := client.TxReceiptDetailByHash(finalTx.Hash())
 			if err != nil {
 				log.Warn("get transaction by hash fail", "err", err)
 			}
 			log.Info("send bridge transaction success", "tx hash", receipt.TxHash)
 
-			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, finalTx.Hash())
+			txHash := fmt.Sprintf("0x%s", finalTx.Hash().String())
+			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, common.HexToHash(txHash))
 			crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
 		}
 
@@ -306,9 +314,9 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
 			if err := s.db.Transaction(func(tx *database.DB) error {
 				if len(crossChainTransfers) > 0 {
-					if err := s.db.CrossChainTransfer.StoreBatchCrossChainTransfer(crossChainTransfers); err != nil {
-						return err
-					}
+					//if err := s.db.CrossChainTransfer.StoreBatchCrossChainTransfer(crossChainTransfers); err != nil {
+					//	return err
+					//}
 				}
 				return nil
 			}); err != nil {
