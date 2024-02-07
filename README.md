@@ -16,13 +16,14 @@ Modify the `[database]` configuration of `config.toml` file.
 Compile project:
 
 ```shell
-make
+make build
 ```
 
 Run:
 
 ```shell
-./selaginella
+./selaginella grpc
+./selaginella exporter
 ```
 
 ## How to use 🤔
