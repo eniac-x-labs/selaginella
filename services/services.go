@@ -186,6 +186,7 @@ func (s *RpcServer) Start(ctx context.Context) error {
 
 func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTransferRequest) (*pb.CrossChainTransferResponse, error) {
 	if in == nil {
+		log.Warn("invalid request: request body is empty")
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
@@ -229,6 +230,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 
 				opts, err = bind.NewKeyedTransactorWithChainID(s.privateKey, new(big.Int).SetUint64(chainId))
 				if err != nil {
+					log.Error("new keyed transactor fail", "err", err)
 					return nil, err
 				}
 			}
@@ -289,6 +291,13 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 			if err != nil {
 				log.Error("send bridge transaction fail", "error", err)
 			}
+
+			receipt, err := client.TxReceiptDetailByHash(finalTx.Hash())
+			if err != nil {
+				log.Warn("get transaction by hash fail", "err", err)
+			}
+			log.Info("send bridge transaction success", "tx hash", receipt.TxHash)
+
 			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, finalTx.Hash())
 			crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
 		}
@@ -320,6 +329,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 
 func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainTransferStatusRequest) (*pb.CrossChainTransferStatusResponse, error) {
 	if in == nil {
+		log.Warn("invalid request: request body is empty")
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
