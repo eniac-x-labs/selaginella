@@ -244,13 +244,13 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				if chainId == s.l1ChainID {
 					tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
 					if err != nil {
-						log.Error("get bridge transaction by abi fail", "error", err)
+						log.Error("get bridge finalize l1 eth by abi fail", "error", err)
 						return nil, err
 					}
 				} else {
 					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
 					if err != nil {
-						log.Error("get bridge transaction by abi fail", "error", err)
+						log.Error("get bridge finalize l2 eth by abi fail", "error", err)
 						return nil, err
 					}
 				}
@@ -258,13 +258,13 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				if chainId == s.l1ChainID {
 					tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
 					if err != nil {
-						log.Error("get bridge transaction by abi fail", "error", err)
+						log.Error("get bridge finalize l1 weth by abi fail", "error", err)
 						return nil, err
 					}
 				} else {
 					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
 					if err != nil {
-						log.Error("get bridge transaction by abi fail", "error", err)
+						log.Error("get bridge finalize l2 weth by abi fail", "error", err)
 						return nil, err
 					}
 				}
@@ -273,13 +273,13 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				if chainId == s.l1ChainID {
 					tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
 					if err != nil {
-						log.Error("get bridge transaction by abi fail", "error", err)
+						log.Error("get bridge finalize l1 erc20 by abi fail", "error", err)
 						return nil, err
 					}
 				} else {
 					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
 					if err != nil {
-						log.Error("get bridge transaction by abi fail", "error", err)
+						log.Error("get bridge finalize l2 erc20 by abi fail", "error", err)
 						return nil, err
 					}
 				}
@@ -309,24 +309,23 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, common.HexToHash(txHash))
 			crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
 		}
-
-		retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
-		if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
-			if err := s.db.Transaction(func(tx *database.DB) error {
-				if len(crossChainTransfers) > 0 {
-					//if err := s.db.CrossChainTransfer.StoreBatchCrossChainTransfer(crossChainTransfers); err != nil {
-					//	return err
-					//}
+	}
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if len(crossChainTransfers) > 0 {
+				if err := s.db.CrossChainTransfer.StoreBatchCrossChainTransfer(crossChainTransfers); err != nil {
+					return err
 				}
-				return nil
-			}); err != nil {
-				log.Error("unable to persist batch", "err", err)
-				return nil, fmt.Errorf("unable to persist batch: %w", err)
 			}
-			return nil, nil
+			return nil
 		}); err != nil {
-			return nil, err
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
 		}
+		return nil, nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return &pb.CrossChainTransferResponse{

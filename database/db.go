@@ -12,6 +12,7 @@ import (
 
 	"github.com/evm-layer2/selaginella/common/retry"
 	"github.com/evm-layer2/selaginella/config"
+	_ "github.com/evm-layer2/selaginella/database/utils/serializers"
 )
 
 type DB struct {
