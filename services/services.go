@@ -211,8 +211,6 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		fee, _ := new(big.Int).SetString(in.Fee, 10)
 		nonce, _ := new(big.Int).SetString(in.Nonce, 10)
 
-		log.Info(fmt.Sprintf("get grpc request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v", sourceChainId, destChainId, amount, fee, nonce))
-
 		if chainId == destChainId.Uint64() {
 			if s.EnableHsm {
 				seqBytes, err := hex.DecodeString(s.HsmCreden)
@@ -248,6 +246,8 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 
 			opts.Context = ctx
 			opts.NoSend = true
+
+			log.Info(fmt.Sprintf("get grpc request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v", sourceChainId, destChainId, amount, fee, nonce))
 
 			switch in.TokenAddress {
 			case s.EthAddress[chainId].String():
@@ -358,15 +358,21 @@ func (s *RpcServer) ChangeTransactionStatus(ticker *time.Ticker) {
 	for {
 		<-ticker.C
 
+		var receipt *types.Receipt
+		
 		tx, err := s.db.CrossChainTransfer.OldestPendingTransaction()
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Error("get oldest pending transaction fail", "err", err)
 			continue
 		}
 
-		receipt, err := s.ethClients[tx.DestChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
-		if errors.Is(err, ethereum.NotFound) {
-			log.Warn("transaction not found")
+		if tx.DestChainId != nil {
+			receipt, err = s.ethClients[tx.DestChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
+			if errors.Is(err, ethereum.NotFound) {
+				log.Warn("transaction not found")
+				continue
+			}
+		} else {
 			continue
 		}
 
