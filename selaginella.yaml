@@ -9,33 +9,33 @@ metrics:
 rpcs:
   - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/o0zYyGdlny_0bvOGS8qtNdMG4REyM0I_'
     chain_id: 11155111
-    founding_pool_address: '0x1038F4349bcCc26adf5Bc5018b0cd9d60743936e'
+    founding_pool_address: '0xC4F7d93eEDA9fee84C464D919d0A3159CF010C12'
     weth_address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'
     usdt_address: ''
 
   - rpc_url: 'https://scroll-sepolia.blockpi.network/v1/rpc/public'
     chain_id: 534351
-    founding_pool_address: '0x23210966fF2fEc36aE70A9F5fc3b4b9C000a18D3'
+    founding_pool_address: '0x18A9aDBDc0E3024580D1CF3Ff6E74A974f065D0E'
     weth_address: '0x5300000000000000000000000000000000000004'
     usdt_address: ''
 
   - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
     chain_id: 1442
-    founding_pool_address: '0xeC9F0cB0c61ea321491F5EB1B77c0C499F986f35'
+    founding_pool_address: '0xB5D85D87D0Db77663aDAe0a709Ac0D0fd0E72DAe'
     weth_address: '0x2ad78787CCaf7FA8FAe8953FD78ab9163f81DcC8'
     usdt_address: ''
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
-    founding_pool_address: '0xA8F4896AF2A8B288D24b8d5A3353bfC4CB5A9e5d'
+    founding_pool_address: '0x6A9Bc01D66453b0621BCAeD7E81613B43Ab3917E'
     weth_address: '0x4200000000000000000000000000000000000006'
     usdt_address: ''
 
 database:
-  db_host: "127.0.0.1"
+  db_host: "postgresql"
   db_port: 5432
   db_user: "postgres"
-  db_password: ""
+  db_password: "vVb9NhLYui"
   db_name: "selaginella"
 
 
