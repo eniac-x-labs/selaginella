@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS cross_chain_transfer (
     guid                  VARCHAR PRIMARY KEY,
     source_chain_id       UINT256 NOT NULL,
     dest_chain_id         UINT256 NOT NULL,
+    source_hash           VARCHAR NOT NULL,
     tx_hash               VARCHAR NOT NULL,
     fee                   UINT256 NOT NULL,
     nonce                 UINT256 NOT NULL,
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS cross_chain_transfer (
     timestamp             INTEGER NOT NULL UNIQUE CHECK (timestamp > 0)
 );
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_timestamp ON cross_chain_transfer(timestamp);
+CREATE INDEX IF NOT EXISTS cross_chain_transfer_source_hash ON cross_chain_transfer(source_hash);
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_tx_hash ON cross_chain_transfer(tx_hash);
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_source_sender_address ON cross_chain_transfer(source_sender_address);
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_dest_receive_address ON cross_chain_transfer(dest_receive_address);

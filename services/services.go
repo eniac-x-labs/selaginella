@@ -210,6 +210,13 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		amount, _ := new(big.Int).SetString(in.Amount, 10)
 		fee, _ := new(big.Int).SetString(in.Fee, 10)
 		nonce, _ := new(big.Int).SetString(in.Nonce, 10)
+		sourceHash := common.HexToHash(in.SourceHash)
+
+		cCF, _ := s.db.CrossChainTransfer.CrossChainTransferBySourceHash(sourceHash.String())
+		if cCF != nil {
+			log.Error("cannot be called repeatedly!")
+			return nil, errors.New("cannot be called repeatedly")
+		}
 
 		if chainId == destChainId.Uint64() {
 			if s.EnableHsm {
@@ -307,8 +314,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				return nil, err
 			}
 
-			txHash := fmt.Sprintf("0x%s", finalTx.Hash().String())
-			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, common.HexToHash(txHash))
+			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, finalTx.Hash(), sourceHash)
 			crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
 		}
 	}
@@ -359,7 +365,7 @@ func (s *RpcServer) ChangeTransactionStatus(ticker *time.Ticker) {
 		<-ticker.C
 
 		var receipt *types.Receipt
-		
+
 		tx, err := s.db.CrossChainTransfer.OldestPendingTransaction()
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Error("get oldest pending transaction fail", "err", err)
@@ -373,6 +379,7 @@ func (s *RpcServer) ChangeTransactionStatus(ticker *time.Ticker) {
 				continue
 			}
 		} else {
+			log.Info("no more pending transaction !")
 			continue
 		}
 
@@ -381,5 +388,7 @@ func (s *RpcServer) ChangeTransactionStatus(ticker *time.Ticker) {
 			log.Error("change transaction status fail", "err", err)
 			continue
 		}
+
+		log.Info("change transaction status success", "txHash", receipt.TxHash)
 	}
 }

@@ -25,6 +25,7 @@ type CrossChainTransfer struct {
 	DestChainId         *big.Int       `gorm:"serializer:u256;column:dest_chain_id" db:"dest_chain_id" json:"dest_chain_id" form:"dest_chain_id"`
 	Fee                 *big.Int       `gorm:"serializer:u256;column:fee" db:"fee" json:"fee" form:"fee"`
 	Nonce               *big.Int       `gorm:"serializer:u256;column:nonce" db:"nonce" json:"nonce" form:"nonce"`
+	SourceHash          common.Hash    `gorm:"column:source_hash;serializer:bytes" db:"source_hash" json:"source_hash" form:"source_hash"`
 	TxHash              common.Hash    `gorm:"column:tx_hash;serializer:bytes" db:"tx_hash" json:"tx_hash" form:"tx_hash"`
 	SourceSenderAddress common.Address `gorm:"column:source_sender_address;serializer:bytes" db:"source_sender_address" json:"source_sender_address" form:"source_sender_address"`
 	DestReceiveAddress  common.Address `gorm:"column:dest_receive_address;serializer:bytes" db:"dest_receive_address" json:"dest_receive_address" form:"dest_receive_address"`
@@ -41,7 +42,8 @@ func (CrossChainTransfer) TableName() string {
 type CrossChainTransferDB interface {
 	CrossChainTransferView
 	StoreBatchCrossChainTransfer([]CrossChainTransfer) error
-	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash) CrossChainTransfer
+	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash, sourceHash common.Hash) CrossChainTransfer
+	CrossChainTransferBySourceHash(sourceHash string) (*CrossChainTransfer, error)
 	ChangeCrossChainTransferSentStatueByTxHash(txHash string) error
 	ChangeCrossChainTransferSuccessStatueByTxHash(txHash string) error
 }
@@ -62,6 +64,19 @@ func NewCrossChainTransferDB(db *gorm.DB) CrossChainTransferDB {
 func (c *crossChainTransferDB) CrossChainTransferByTxHash(txHash string) (*CrossChainTransfer, error) {
 	var crossChainTransfer CrossChainTransfer
 	result := c.gorm.Table("cross_chain_transfer").Where("tx_hash = ?", txHash).Take(&crossChainTransfer)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+
+	return &crossChainTransfer, nil
+}
+
+func (c *crossChainTransferDB) CrossChainTransferBySourceHash(sourceHash string) (*CrossChainTransfer, error) {
+	var crossChainTransfer CrossChainTransfer
+	result := c.gorm.Table("cross_chain_transfer").Where("source_hash = ?", sourceHash).Take(&crossChainTransfer)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -113,7 +128,7 @@ func (c *crossChainTransferDB) StoreBatchCrossChainTransfer(transfers []CrossCha
 	return result.Error
 }
 
-func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash) CrossChainTransfer {
+func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash, sourceHash common.Hash) CrossChainTransfer {
 
 	sci, _ := new(big.Int).SetString(in.SourceChainId, 10)
 	dci, _ := new(big.Int).SetString(in.DestChainId, 10)
@@ -127,6 +142,7 @@ func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransfer
 		DestChainId:         dci,
 		Fee:                 fee,
 		Nonce:               nonce,
+		SourceHash:          sourceHash,
 		TxHash:              txHash,
 		SourceSenderAddress: common.Address{},
 		DestReceiveAddress:  common.HexToAddress(in.ReceiveAddress),
