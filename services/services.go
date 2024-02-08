@@ -16,7 +16,9 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gorm.io/gorm"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -182,6 +184,11 @@ func (s *RpcServer) Start(ctx context.Context) error {
 			log.Error("Could not GRPC server")
 		}
 	}(s)
+
+	ticker := time.NewTicker(10 * time.Second)
+	go func() {
+		s.ChangeTransactionStatus(ticker)
+	}()
 	return nil
 }
 
@@ -203,6 +210,9 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		amount, _ := new(big.Int).SetString(in.Amount, 10)
 		fee, _ := new(big.Int).SetString(in.Fee, 10)
 		nonce, _ := new(big.Int).SetString(in.Nonce, 10)
+
+		log.Info(fmt.Sprintf("get grpc request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v", sourceChainId, destChainId, amount, fee, nonce))
+
 		if chainId == destChainId.Uint64() {
 			if s.EnableHsm {
 				seqBytes, err := hex.DecodeString(s.HsmCreden)
@@ -297,14 +307,6 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				return nil, err
 			}
 
-			log.Info("wait tx send")
-			time.Sleep(30 * time.Second)
-			receipt, err := client.TxReceiptDetailByHash(finalTx.Hash())
-			if err != nil {
-				log.Warn("get transaction by hash fail", "err", err)
-			}
-			log.Info("send bridge transaction success", "tx hash", receipt.TxHash)
-
 			txHash := fmt.Sprintf("0x%s", finalTx.Hash().String())
 			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, common.HexToHash(txHash))
 			crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
@@ -340,7 +342,7 @@ func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainT
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
-	err := s.db.CrossChainTransfer.ChangeCrossChainTransferStatueByTxHash(in.TxHash)
+	err := s.db.CrossChainTransfer.ChangeCrossChainTransferSuccessStatueByTxHash(in.TxHash)
 	if err != nil {
 		log.Error("change cross chain transfer status fail", "err", err)
 		return nil, err
@@ -350,4 +352,28 @@ func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainT
 		Success: true,
 		Message: "call cross chain transfer success",
 	}, nil
+}
+
+func (s *RpcServer) ChangeTransactionStatus(ticker *time.Ticker) {
+	for {
+		<-ticker.C
+
+		tx, err := s.db.CrossChainTransfer.OldestPendingTransaction()
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Error("get oldest pending transaction fail", "err", err)
+			continue
+		}
+
+		receipt, err := s.ethClients[tx.DestChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
+		if errors.Is(err, ethereum.NotFound) {
+			log.Warn("transaction not found")
+			continue
+		}
+
+		err = s.db.CrossChainTransfer.ChangeCrossChainTransferSentStatueByTxHash(receipt.TxHash.String())
+		if err != nil {
+			log.Error("change transaction status fail", "err", err)
+			continue
+		}
+	}
 }
