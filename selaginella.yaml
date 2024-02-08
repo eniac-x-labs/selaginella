@@ -7,27 +7,27 @@ metrics:
   port: 8081
 
 rpcs:
-  - rpc_url: 'https://rpc.ankr.com/eth_sepolia/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+  - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/o0zYyGdlny_0bvOGS8qtNdMG4REyM0I_'
     chain_id: 11155111
     founding_pool_address: '0xAC13457009a2aE49820Bd7517818436dE2202549'
     weth_address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'
     usdt_address: ''
 
-  - rpc_url: 'https://rpc.ankr.com/scroll_sepolia_testnet/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+  - rpc_url: 'https://scroll-sepolia.blockpi.network/v1/rpc/public'
     chain_id: 534351
-    founding_pool_address: '0xd01c12c59647f8eAD076c511fd681cc3a81E36d4'
+    founding_pool_address: '0x23210966fF2fEc36aE70A9F5fc3b4b9C000a18D3'
     weth_address: '0x5300000000000000000000000000000000000004'
     usdt_address: ''
 
   - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
     chain_id: 1442
     founding_pool_address: '0xeC9F0cB0c61ea321491F5EB1B77c0C499F986f35'
-    weth_address: ''
+    weth_address: '0x2ad78787CCaf7FA8FAe8953FD78ab9163f81DcC8'
     usdt_address: ''
 
-  - rpc_url: 'https://rpc.ankr.com/optimism_sepolia/7f3ae11204e03961b67c557c4996244f0a53222b23c31a7baf9ae91c6bd89702'
+  - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
-    founding_pool_address: '0xD35480743Dd58B70e752B109A09bE54eEb5e4a70'
+    founding_pool_address: '0xA8F4896AF2A8B288D24b8d5A3353bfC4CB5A9e5d'
     weth_address: '0x4200000000000000000000000000000000000006'
     usdt_address: ''
 
