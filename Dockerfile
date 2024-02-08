@@ -25,7 +25,7 @@ COPY --from=builder /app/selaginella/migrations /app/selaginella/migrations
 WORKDIR /app
 
 ENV SELAGINELLA_MIGRATIONS_DIR="/app/selaginella/migrations"
-#ENV SELAGINELLA_CONFIG="./selaginella.yaml"
+ENV SELAGINELLA_CONFIG="/app/selaginella/selaginella.yaml"
 #ENV SELAGINELLA_MIGRATIONS_DIR="./migrations"
 ENV SELAGINELLA_ENABLE_HSM=false
 ENV SELAGINELLA_HSM_API_NAME=""
