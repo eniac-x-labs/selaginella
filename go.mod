@@ -7,6 +7,7 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0
 	github.com/ethereum/go-ethereum v1.13.8
 	github.com/google/uuid v1.5.0
+	github.com/jackc/pgtype v1.14.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/common v0.44.0
@@ -48,6 +49,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.4.3 // indirect

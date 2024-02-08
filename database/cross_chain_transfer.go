@@ -29,7 +29,7 @@ type CrossChainTransfer struct {
 	DestReceiveAddress  common.Address `gorm:"column:dest_receive_address;serializer:bytes" db:"dest_receive_address" json:"dest_receive_address" form:"dest_receive_address"`
 	TokenAddress        common.Address `gorm:"column:token_address;serializer:bytes" db:"token_address" json:"token_address" form:"token_address"`
 	Amount              *big.Int       `gorm:"serializer:u256;column:amount" db:"amount" json:"amount" form:"amount"`
-	Status              int8           `gorm:"serializer:u256;column:status" db:"status" json:"status" form:"status"`
+	Status              int8           `gorm:"column:status" db:"status" json:"status" form:"status"`
 	Timestamp           int64          `gorm:"column:timestamp" db:"timestamp" json:"timestamp" form:"timestamp"`
 }
 
