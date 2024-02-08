@@ -302,13 +302,15 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 				}
 			}
 
-			if tx != nil {
+			if tx.Data() != nil {
+				fmt.Println("*", tx.Data())
 				finalTx, err = s.RawL2BridgeContract[chainId].RawTransact(opts, tx.Data())
 				if err != nil {
 					log.Error("raw send bridge transaction fail", "error", err)
 					return nil, err
 				}
 			} else {
+				fmt.Println("*", tx.Data())
 				log.Error("get bridge transaction by abi fail")
 				return nil, err
 			}
