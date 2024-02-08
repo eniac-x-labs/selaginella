@@ -9,7 +9,7 @@ metrics:
 rpcs:
   - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/o0zYyGdlny_0bvOGS8qtNdMG4REyM0I_'
     chain_id: 11155111
-    founding_pool_address: '0xC4F7d93eEDA9fee84C464D919d0A3159CF010C12'
+    founding_pool_address: '0x6e76B86C54F52eB49f5f9CdE8A2424Cb48813F38'
     weth_address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'
     usdt_address: ''
 
@@ -27,7 +27,7 @@ rpcs:
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
-    founding_pool_address: '0x6A9Bc01D66453b0621BCAeD7E81613B43Ab3917E'
+    founding_pool_address: '0x5a4AEb044cE88fBEe8c058f18263DaCf1d8F16fF'
     weth_address: '0x4200000000000000000000000000000000000006'
     usdt_address: ''
 
