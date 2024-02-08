@@ -271,6 +271,8 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 						return nil, err
 					}
 				}
+				log.Info("get bridge finalize eth by abi success")
+
 			case s.WEthAddress[chainId].String():
 				if chainId == s.l1ChainID {
 					tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
@@ -285,6 +287,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 						return nil, err
 					}
 				}
+				log.Info("get bridge finalize weth by abi success")
 
 			default:
 				if chainId == s.l1ChainID {
@@ -300,10 +303,11 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 						return nil, err
 					}
 				}
+				log.Info("get bridge finalize erc20 by abi success")
 			}
 
 			if tx.Data() != nil {
-				fmt.Println("*", tx.Data())
+				fmt.Println("*", opts)
 				finalTx, err = s.RawL2BridgeContract[chainId].RawTransact(opts, tx.Data())
 				if err != nil {
 					log.Error("raw send bridge transaction fail", "error", err)
