@@ -9,7 +9,7 @@ metrics:
 rpcs:
   - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/o0zYyGdlny_0bvOGS8qtNdMG4REyM0I_'
     chain_id: 11155111
-    founding_pool_address: '0xAC13457009a2aE49820Bd7517818436dE2202549'
+    founding_pool_address: '0x1038F4349bcCc26adf5Bc5018b0cd9d60743936e'
     weth_address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'
     usdt_address: ''
 
