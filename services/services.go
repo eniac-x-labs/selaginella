@@ -172,7 +172,7 @@ func (s *RpcServer) Start(ctx context.Context) error {
 
 		listener, err := net.Listen("tcp", addr)
 		if err != nil {
-			log.Error("Could not start tcp listener. ")
+			log.Error("Could not start tcp listener ")
 		}
 
 		opt := grpc.MaxRecvMsgSize(MaxRecvMessageSize)
