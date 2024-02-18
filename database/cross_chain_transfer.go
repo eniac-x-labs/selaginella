@@ -42,15 +42,17 @@ func (CrossChainTransfer) TableName() string {
 type CrossChainTransferDB interface {
 	CrossChainTransferView
 	StoreBatchCrossChainTransfer([]CrossChainTransfer) error
-	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash, sourceHash common.Hash) CrossChainTransfer
+	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, sourceHash common.Hash) CrossChainTransfer
 	CrossChainTransferBySourceHash(sourceHash string) (*CrossChainTransfer, error)
 	ChangeCrossChainTransferSentStatueByTxHash(txHash string) error
 	ChangeCrossChainTransferSuccessStatueByTxHash(txHash string) error
+	UpdateCrossChainTransferTransactionHash(CrossChainTransfer) error
 }
 
 type CrossChainTransferView interface {
 	CrossChainTransferByTxHash(txHash string) (*CrossChainTransfer, error)
-	OldestPendingTransaction() (*CrossChainTransfer, error)
+	OldestPendingSentTransaction() (*CrossChainTransfer, error)
+	OldestPendingNoSentTransaction() (*CrossChainTransfer, error)
 }
 
 type crossChainTransferDB struct {
@@ -128,7 +130,7 @@ func (c *crossChainTransferDB) StoreBatchCrossChainTransfer(transfers []CrossCha
 	return result.Error
 }
 
-func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, txHash common.Hash, sourceHash common.Hash) CrossChainTransfer {
+func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, sourceHash common.Hash) CrossChainTransfer {
 
 	sci, _ := new(big.Int).SetString(in.SourceChainId, 10)
 	dci, _ := new(big.Int).SetString(in.DestChainId, 10)
@@ -143,7 +145,7 @@ func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransfer
 		Fee:                 fee,
 		Nonce:               nonce,
 		SourceHash:          sourceHash,
-		TxHash:              txHash,
+		TxHash:              common.Hash{},
 		SourceSenderAddress: common.Address{},
 		DestReceiveAddress:  common.HexToAddress(in.ReceiveAddress),
 		TokenAddress:        common.HexToAddress(in.TokenAddress),
@@ -153,9 +155,9 @@ func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransfer
 	}
 }
 
-func (c *crossChainTransferDB) OldestPendingTransaction() (*CrossChainTransfer, error) {
+func (c *crossChainTransferDB) OldestPendingNoSentTransaction() (*CrossChainTransfer, error) {
 	var crossChainTransfer CrossChainTransfer
-	result := c.gorm.Table("cross_chain_transfer").Where("status = ?", PendingStatus).Order("timestamp asc").Find(&crossChainTransfer)
+	result := c.gorm.Table("cross_chain_transfer").Where("status = ? and tx_hash = ?", PendingStatus, common.Hash{}.String()).Order("timestamp asc").Find(&crossChainTransfer)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, result.Error
@@ -163,4 +165,24 @@ func (c *crossChainTransferDB) OldestPendingTransaction() (*CrossChainTransfer, 
 		return nil, result.Error
 	}
 	return &crossChainTransfer, nil
+}
+
+func (c *crossChainTransferDB) OldestPendingSentTransaction() (*CrossChainTransfer, error) {
+	var crossChainTransfer CrossChainTransfer
+	result := c.gorm.Table("cross_chain_transfer").Where("status = ? and tx_hash != ?", PendingStatus, common.Hash{}.String()).Order("timestamp asc").Find(&crossChainTransfer)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, result.Error
+		}
+		return nil, result.Error
+	}
+	return &crossChainTransfer, nil
+}
+
+func (c *crossChainTransferDB) UpdateCrossChainTransferTransactionHash(transfer CrossChainTransfer) error {
+	result := c.gorm.Table("cross_chain_transfer").Where("guid = ?", transfer.GUID.String()).Updates(map[string]interface{}{"tx_hash": transfer.TxHash.String()})
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }

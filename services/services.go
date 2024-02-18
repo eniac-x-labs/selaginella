@@ -27,6 +27,7 @@ import (
 
 	"github.com/evm-layer2/selaginella/bindings"
 	"github.com/evm-layer2/selaginella/common/retry"
+	"github.com/evm-layer2/selaginella/common/tasks"
 	"github.com/evm-layer2/selaginella/config"
 	"github.com/evm-layer2/selaginella/database"
 	node "github.com/evm-layer2/selaginella/eth_client"
@@ -64,6 +65,7 @@ type RpcServer struct {
 	pb.BridgeServiceServer
 	privateKey *ecdsa.PrivateKey
 	l1ChainID  uint64
+	tasks      tasks.Group
 }
 
 func (s *RpcServer) Stop(ctx context.Context) error {
@@ -75,7 +77,7 @@ func (s *RpcServer) Stopped() bool {
 	return s.stopped.Load()
 }
 
-func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, l1ChainID uint64) (*RpcServer, error) {
+func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, l1ChainID uint64, shutdown context.CancelCauseFunc) (*RpcServer, error) {
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
@@ -157,6 +159,9 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		WEthAddress:         WEthAddress,
 		privateKey:          priKey,
 		l1ChainID:           l1ChainID,
+		tasks: tasks.Group{HandleCrit: func(err error) {
+			shutdown(fmt.Errorf("critical error in selaginella processor: %w", err))
+		}},
 	}, nil
 }
 
@@ -185,10 +190,28 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		}
 	}(s)
 
-	ticker := time.NewTicker(10 * time.Second)
-	go func() {
-		s.ChangeTransactionStatus(ticker)
-	}()
+	CTSTicker := time.NewTicker(10 * time.Second)
+	s.tasks.Go(func() error {
+		for range CTSTicker.C {
+			err := s.ChangeTransactionStatus()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	SBTTicker := time.NewTicker(3 * time.Second)
+	s.tasks.Go(func() error {
+		for range SBTTicker.C {
+			err := s.SendBridgeTransaction()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	return nil
 }
 
@@ -198,138 +221,18 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
-	var opts *bind.TransactOpts
-	var err error
-	var tx *types.Transaction
-	var finalTx *types.Transaction
 	var crossChainTransfers []database.CrossChainTransfer
 
-	for chainId, client := range s.ethClients {
-		sourceChainId, _ := new(big.Int).SetString(in.SourceChainId, 10)
-		destChainId, _ := new(big.Int).SetString(in.DestChainId, 10)
-		amount, _ := new(big.Int).SetString(in.Amount, 10)
-		fee, _ := new(big.Int).SetString(in.Fee, 10)
-		nonce, _ := new(big.Int).SetString(in.Nonce, 10)
-		sourceHash := common.HexToHash(in.SourceHash)
-
-		cCF, _ := s.db.CrossChainTransfer.CrossChainTransferBySourceHash(sourceHash.String())
-		if cCF != nil {
-			log.Error("cannot be called repeatedly!")
-			return nil, errors.New("cannot be called repeatedly")
-		}
-
-		if chainId == destChainId.Uint64() {
-			if s.EnableHsm {
-				seqBytes, err := hex.DecodeString(s.HsmCreden)
-				if err != nil {
-					log.Error("selaginella", "decode hsm creden fail", err.Error())
-				}
-				apikey := option.WithCredentialsJSON(seqBytes)
-				kClient, err := kms.NewKeyManagementClient(context.Background(), apikey)
-				if err != nil {
-					log.Error("selaginella", "create signer error", err.Error())
-				}
-				mk := &sign.ManagedKey{
-					KeyName:      s.HsmAPIName,
-					EthereumAddr: common.HexToAddress(s.HsmAddress),
-					Gclient:      kClient,
-				}
-				opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), new(big.Int).SetUint64(chainId))
-				if err != nil {
-					log.Error("selaginella", "create signer error", err.Error())
-				}
-			} else {
-				if s.privateKey == nil {
-					log.Error("selaginella", "create signer error", err.Error())
-					return nil, errors.New("no private key provided")
-				}
-
-				opts, err = bind.NewKeyedTransactorWithChainID(s.privateKey, new(big.Int).SetUint64(chainId))
-				if err != nil {
-					log.Error("new keyed transactor fail", "err", err)
-					return nil, err
-				}
-			}
-
-			opts.Context = ctx
-			opts.NoSend = true
-
-			log.Info(fmt.Sprintf("get grpc request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v", sourceChainId, destChainId, amount, fee, nonce))
-
-			switch in.TokenAddress {
-			case s.EthAddress[chainId].String():
-				if chainId == s.l1ChainID {
-					tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
-					if err != nil {
-						log.Error("get bridge finalize l1 eth by abi fail", "error", err)
-						return nil, err
-					}
-				} else {
-					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
-					if err != nil {
-						log.Error("get bridge finalize l2 eth by abi fail", "error", err)
-						return nil, err
-					}
-				}
-				log.Info("get bridge finalize eth by abi success")
-
-			case s.WEthAddress[chainId].String():
-				if chainId == s.l1ChainID {
-					tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
-					if err != nil {
-						log.Error("get bridge finalize l1 weth by abi fail", "error", err)
-						return nil, err
-					}
-				} else {
-					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeWETH(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), amount, fee, nonce)
-					if err != nil {
-						log.Error("get bridge finalize l2 weth by abi fail", "error", err)
-						return nil, err
-					}
-				}
-				log.Info("get bridge finalize weth by abi success")
-
-			default:
-				if chainId == s.l1ChainID {
-					tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
-					if err != nil {
-						log.Error("get bridge finalize l1 erc20 by abi fail", "error", err)
-						return nil, err
-					}
-				} else {
-					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, sourceChainId, destChainId, common.HexToAddress(in.ReceiveAddress), common.HexToAddress(in.TokenAddress), amount, fee, nonce)
-					if err != nil {
-						log.Error("get bridge finalize l2 erc20 by abi fail", "error", err)
-						return nil, err
-					}
-				}
-				log.Info("get bridge finalize erc20 by abi success")
-			}
-
-			if chainId == s.l1ChainID {
-				finalTx, err = s.RawL1BridgeContract.RawTransact(opts, tx.Data())
-				if err != nil {
-					log.Error("raw send bridge transaction fail", "error", err)
-					return nil, err
-				}
-			} else {
-				finalTx, err = s.RawL2BridgeContract[chainId].RawTransact(opts, tx.Data())
-				if err != nil {
-					log.Error("raw send bridge transaction fail", "error", err)
-					return nil, err
-				}
-			}
-
-			err = client.SendTransaction(ctx, finalTx)
-			if err != nil {
-				log.Error("send bridge transaction fail", "error", err)
-				return nil, err
-			}
-
-			crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, finalTx.Hash(), sourceHash)
-			crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
-		}
+	cCF, _ := s.db.CrossChainTransfer.CrossChainTransferBySourceHash(in.SourceHash)
+	if cCF != nil {
+		log.Error("cannot be called repeatedly!")
+		return nil, errors.New("cannot be called repeatedly")
 	}
+
+	sourceHash := common.HexToHash(in.SourceHash)
+	crossChainTransfer := s.db.CrossChainTransfer.BuildCrossChainTransfer(in, sourceHash)
+	crossChainTransfers = append(crossChainTransfers, crossChainTransfer)
+
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
 		if err := s.db.Transaction(func(tx *database.DB) error {
@@ -372,35 +275,181 @@ func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainT
 	}, nil
 }
 
-func (s *RpcServer) ChangeTransactionStatus(ticker *time.Ticker) {
-	for {
-		<-ticker.C
+func (s *RpcServer) SendBridgeTransaction() error {
 
-		var receipt *types.Receipt
+	var opts *bind.TransactOpts
+	var err error
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var ctx = context.Background()
+	var nilCrossChainTransfer database.CrossChainTransfer
 
-		tx, err := s.db.CrossChainTransfer.OldestPendingTransaction()
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Error("get oldest pending transaction fail", "err", err)
-			continue
-		}
-
-		if tx.DestChainId != nil {
-			receipt, err = s.ethClients[tx.DestChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
-			if errors.Is(err, ethereum.NotFound) {
-				log.Warn("transaction not found")
-				continue
-			}
-		} else {
-			log.Info("no more pending transaction !")
-			continue
-		}
-
-		err = s.db.CrossChainTransfer.ChangeCrossChainTransferSentStatueByTxHash(receipt.TxHash.String())
-		if err != nil {
-			log.Error("change transaction status fail", "err", err)
-			continue
-		}
-
-		log.Info("change transaction status success", "txHash", receipt.TxHash)
+	bridgeTx, _ := s.db.CrossChainTransfer.OldestPendingNoSentTransaction()
+	if *bridgeTx == nilCrossChainTransfer {
+		log.Warn("no more bridge transaction need to be sent")
+		return nil
 	}
+
+	for chainId, client := range s.ethClients {
+		if chainId == bridgeTx.DestChainId.Uint64() {
+			if s.EnableHsm {
+				seqBytes, err := hex.DecodeString(s.HsmCreden)
+				if err != nil {
+					log.Error("selaginella", "decode hsm creden fail", err.Error())
+				}
+				apikey := option.WithCredentialsJSON(seqBytes)
+				kClient, err := kms.NewKeyManagementClient(context.Background(), apikey)
+				if err != nil {
+					log.Error("selaginella", "create signer error", err.Error())
+				}
+				mk := &sign.ManagedKey{
+					KeyName:      s.HsmAPIName,
+					EthereumAddr: common.HexToAddress(s.HsmAddress),
+					Gclient:      kClient,
+				}
+				opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), new(big.Int).SetUint64(chainId))
+				if err != nil {
+					log.Error("selaginella", "create signer error", err.Error())
+				}
+			} else {
+				if s.privateKey == nil {
+					log.Error("selaginella", "create signer error", err.Error())
+					return errors.New("no private key provided")
+				}
+
+				opts, err = bind.NewKeyedTransactorWithChainID(s.privateKey, new(big.Int).SetUint64(chainId))
+				if err != nil {
+					log.Error("new keyed transactor fail", "err", err)
+					return err
+				}
+			}
+
+			opts.Context = ctx
+			opts.NoSend = true
+
+			log.Info(fmt.Sprintf("get send transaction request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v", bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce))
+
+			switch bridgeTx.TokenAddress.String() {
+			case s.EthAddress[chainId].String():
+				if chainId == s.l1ChainID {
+					tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize l1 eth by abi fail", "error", err)
+						return err
+					}
+				} else {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize l2 eth by abi fail", "error", err)
+						return err
+					}
+				}
+				log.Info("get bridge finalize eth by abi success")
+
+			case s.WEthAddress[chainId].String():
+				if chainId == s.l1ChainID {
+					tx, err = s.L1BridgeContract.BridgeFinalizeWETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize l1 weth by abi fail", "error", err)
+						return err
+					}
+				} else {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeWETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize l2 weth by abi fail", "error", err)
+						return err
+					}
+				}
+				log.Info("get bridge finalize weth by abi success")
+
+			default:
+				if chainId == s.l1ChainID {
+					tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.TokenAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize l1 erc20 by abi fail", "error", err)
+						return err
+					}
+				} else {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.TokenAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize l2 erc20 by abi fail", "error", err)
+						return err
+					}
+				}
+				log.Info("get bridge finalize erc20 by abi success")
+			}
+
+			if chainId == s.l1ChainID {
+				finalTx, err = s.RawL1BridgeContract.RawTransact(opts, tx.Data())
+				if err != nil {
+					log.Error("raw send bridge transaction fail", "error", err)
+					return err
+				}
+			} else {
+				finalTx, err = s.RawL2BridgeContract[chainId].RawTransact(opts, tx.Data())
+				if err != nil {
+					log.Error("raw send bridge transaction fail", "error", err)
+					return err
+				}
+			}
+
+			err = client.SendTransaction(ctx, finalTx)
+			if err != nil {
+				log.Error("send bridge transaction fail", "error", err)
+				return err
+			}
+			bridgeTx.TxHash = finalTx.Hash()
+		}
+	}
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if bridgeTx != nil {
+				if err := s.db.CrossChainTransfer.UpdateCrossChainTransferTransactionHash(*bridgeTx); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *RpcServer) ChangeTransactionStatus() error {
+	var receipt *types.Receipt
+
+	tx, err := s.db.CrossChainTransfer.OldestPendingSentTransaction()
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error("get oldest pending transaction fail", "err", err)
+		return err
+	}
+
+	if tx.DestChainId != nil {
+		receipt, err = s.ethClients[tx.DestChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
+		if errors.Is(err, ethereum.NotFound) {
+			log.Warn("transaction not found")
+			return nil
+		}
+	} else {
+		log.Info("no more pending transaction !")
+		return nil
+	}
+
+	err = s.db.CrossChainTransfer.ChangeCrossChainTransferSentStatueByTxHash(receipt.TxHash.String())
+	if err != nil {
+		log.Error("change transaction status fail", "err", err)
+		return err
+	}
+
+	log.Info("change transaction status success", "txHash", receipt.TxHash)
+
+	return nil
 }
