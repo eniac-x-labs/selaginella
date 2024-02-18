@@ -80,7 +80,7 @@ var (
 	}
 )
 
-func runGrpcServer(ctx *cli.Context, _ context.CancelCauseFunc) (cliapp.Lifecycle, error) {
+func runGrpcServer(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lifecycle, error) {
 	cfg, err := config.NewConfig(ctx.String(ConfigFlag.Name))
 	if err != nil {
 		log.Error("failed to load config", "err", err)
@@ -116,7 +116,7 @@ func runGrpcServer(ctx *cli.Context, _ context.CancelCauseFunc) (cliapp.Lifecycl
 
 	l1ChainID := ctx.Uint64(L1ChainIDFlag.Name)
 
-	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, l1ChainID)
+	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, l1ChainID, shutdown)
 }
 
 func runMigrations(ctx *cli.Context) error {
