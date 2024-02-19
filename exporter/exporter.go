@@ -6,6 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/evm-layer2/selaginella/common/retry"
+	"github.com/evm-layer2/selaginella/common/tasks"
 	"math/big"
 	"net/http"
 	"strings"
@@ -33,7 +37,6 @@ import (
 type Exporter struct {
 	exporterConfig *config.Exporter
 	db             *database.DB
-	shutdown       context.CancelCauseFunc
 	ethClients     map[uint64]node.EthClient
 	*HsmConfig
 	poolAddresses       map[uint64]common.Address
@@ -47,6 +50,7 @@ type Exporter struct {
 	privateKey          *ecdsa.PrivateKey
 	l1ChainID           uint64
 	stopped             atomic.Bool
+	tasks               tasks.Group
 	*TransferMultiple
 }
 
@@ -140,7 +144,6 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 	return &Exporter{
 		exporterConfig:      &exporterConfig,
 		db:                  db,
-		shutdown:            shutdown,
 		ethClients:          ethClients,
 		HsmConfig:           hsmCfg,
 		RawL1BridgeContract: rawL1BridgeContract,
@@ -154,6 +157,9 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 		USDTAddress:         USDTAddress,
 		l1ChainID:           l1ChainID,
 		TransferMultiple:    multipleCfg,
+		tasks: tasks.Group{HandleCrit: func(err error) {
+			shutdown(fmt.Errorf("critical error in selaginella exporter: %w", err))
+		}},
 	}, nil
 }
 
@@ -173,13 +179,49 @@ func (er *Exporter) Start(ctx context.Context) error {
 		</html>`))
 	})
 
-	go er.metricEthFundBalance()
+	eFBTicker := time.NewTicker(2 * time.Hour)
+	er.tasks.Go(func() error {
+		for range eFBTicker.C {
+			err := er.metricEthFundBalance()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
-	go er.metricWEthFundBalance()
+	wFBTicker := time.NewTicker(2 * time.Hour)
+	er.tasks.Go(func() error {
+		for range wFBTicker.C {
+			err := er.metricWEthFundBalance()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
-	go er.metricUSDTFundBalance()
+	uFBTicker := time.NewTicker(2 * time.Hour)
+	er.tasks.Go(func() error {
+		for range uFBTicker.C {
+			err := er.metricUSDTFundBalance()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
-	go er.metricEthereumPoolBalance()
+	ePBTicker := time.NewTicker(60 * time.Second)
+	er.tasks.Go(func() error {
+		for range ePBTicker.C {
+			err := er.metricEthereumPoolBalance()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
 	log.Infoln("Listening on", er.exporterConfig.ExportAddress)
 	if err := http.ListenAndServe(er.exporterConfig.ExportAddress, nil); err != nil {
@@ -208,8 +250,8 @@ func (er *Exporter) Stopped() bool {
 	return er.stopped.Load()
 }
 
-func (er *Exporter) metricEthFundBalance() {
-	ticker := time.NewTicker(2 * time.Hour)
+func (er *Exporter) metricEthFundBalance() error {
+
 	var ethereumPoolBalance *big.Int
 	var ethereumChainId uint64
 	var opPoolBalance *big.Int
@@ -220,70 +262,72 @@ func (er *Exporter) metricEthFundBalance() {
 	var scrollChainId uint64
 	var chainCount uint64
 
-	for {
-		<-ticker.C
-		for chainId, client := range er.ethClients {
-			latestBlockNumber, err := client.GetLatestBlock()
-			if err != nil {
-				log.Errorln("exporter", "client get latest block number fail", err)
-				return
-			}
-
-			balance, err := client.GetBalanceByBlockNumber(er.poolAddresses[chainId].String(), latestBlockNumber)
-			if err != nil {
-				log.Errorln("exporter", "client get pool balance fail", err)
-				return
-			}
-			switch chainId {
-			case common2.ChainEthID, common2.ChainEthSepoliaID:
-				ethereumChainId = chainId
-				ethereumPoolBalance = balance
-			case common2.ChainOpID, common2.ChainOpSepoliaID:
-				opChainId = chainId
-				opPoolBalance = balance
-			case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
-				polygonZkEvmChainId = chainId
-				polygonZkEvmPoolBalance = balance
-			case common2.ChainScrollID, common2.ChainScrollSepoliaID:
-				scrollChainId = chainId
-				scrollPoolBalance = balance
-			default:
-				log.Errorln("unknown chain")
-				return
-			}
-			chainCount++
-		}
-		ChainTotalBalance := new(big.Int).Add(ethereumPoolBalance, opPoolBalance)
-		ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
-		ChainTotalBalance.Add(ChainTotalBalance, scrollPoolBalance)
-		ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
-
-		if err := er.metricOpBalance(&opPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, opChainId, ethereumChainId, er.EthAddress[ethereumChainId].String(), er.EthAddress[opChainId].String()); err != nil {
-			log.Errorln("metric op eth balance fail", "error", err)
-		}
-		if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.EthAddress[ethereumChainId].String(), er.EthAddress[polygonZkEvmChainId].String()); err != nil {
-			log.Errorln("metric polygonZkEvm eth balance fail", "error", err)
-		}
-		if err := er.metricScrollBalance(&scrollPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, scrollChainId, ethereumChainId, er.EthAddress[ethereumChainId].String(), er.EthAddress[scrollChainId].String()); err != nil {
-			log.Errorln("metric scroll eth balance fail", "error", err)
+	for chainId, client := range er.ethClients {
+		latestBlockNumber, err := client.GetLatestBlock()
+		if err != nil {
+			log.Errorln("exporter", "client get latest block number fail", err)
+			return err
 		}
 
-		ethPBF, _ := ethereumPoolBalance.Float64()
-		opPBF, _ := opPoolBalance.Float64()
-		pyPBF, _ := polygonZkEvmPoolBalance.Float64()
-		scPBF, _ := scrollPoolBalance.Float64()
-		averageBalanceF, _ := ChainAverageBalance.Float64()
-
-		ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[ethereumChainId].String(), er.EthAddress[ethereumChainId].String()).Set(ethPBF)
-		opPoolBalanceMetric.WithLabelValues(er.poolAddresses[opChainId].String(), er.EthAddress[opChainId].String()).Set(opPBF)
-		polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.EthAddress[polygonZkEvmChainId].String()).Set(pyPBF)
-		scrollPoolBalanceMetric.WithLabelValues(er.poolAddresses[scrollChainId].String(), er.EthAddress[scrollChainId].String()).Set(scPBF)
-		chainAverageBalanceMetric.WithLabelValues("ETH").Set(averageBalanceF)
+		balance, err := client.GetBalanceByBlockNumber(er.poolAddresses[chainId].String(), latestBlockNumber)
+		if err != nil {
+			log.Errorln("exporter", "client get pool balance fail", err)
+			return err
+		}
+		switch chainId {
+		case common2.ChainEthID, common2.ChainEthSepoliaID:
+			ethereumChainId = chainId
+			ethereumPoolBalance = balance
+		case common2.ChainOpID, common2.ChainOpSepoliaID:
+			opChainId = chainId
+			opPoolBalance = balance
+		case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
+			polygonZkEvmChainId = chainId
+			polygonZkEvmPoolBalance = balance
+		case common2.ChainScrollID, common2.ChainScrollSepoliaID:
+			scrollChainId = chainId
+			scrollPoolBalance = balance
+		default:
+			log.Errorln("unknown chain")
+			return errors.New("unknown chain")
+		}
+		chainCount++
 	}
+	ChainTotalBalance := new(big.Int).Add(ethereumPoolBalance, opPoolBalance)
+	ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
+	ChainTotalBalance.Add(ChainTotalBalance, scrollPoolBalance)
+	ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
+
+	if err := er.metricOpBalance(&opPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, opChainId, ethereumChainId, er.EthAddress[ethereumChainId].String(), er.EthAddress[opChainId].String()); err != nil {
+		log.Errorln("metric op eth balance fail", "error", err)
+		return err
+	}
+	if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.EthAddress[ethereumChainId].String(), er.EthAddress[polygonZkEvmChainId].String()); err != nil {
+		log.Errorln("metric polygonZkEvm eth balance fail", "error", err)
+		return err
+	}
+	if err := er.metricScrollBalance(&scrollPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, scrollChainId, ethereumChainId, er.EthAddress[ethereumChainId].String(), er.EthAddress[scrollChainId].String()); err != nil {
+		log.Errorln("metric scroll eth balance fail", "error", err)
+		return err
+	}
+
+	ethPBF, _ := ethereumPoolBalance.Float64()
+	opPBF, _ := opPoolBalance.Float64()
+	pyPBF, _ := polygonZkEvmPoolBalance.Float64()
+	scPBF, _ := scrollPoolBalance.Float64()
+	averageBalanceF, _ := ChainAverageBalance.Float64()
+
+	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[ethereumChainId].String(), er.EthAddress[ethereumChainId].String()).Set(ethPBF)
+	opPoolBalanceMetric.WithLabelValues(er.poolAddresses[opChainId].String(), er.EthAddress[opChainId].String()).Set(opPBF)
+	polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.EthAddress[polygonZkEvmChainId].String()).Set(pyPBF)
+	scrollPoolBalanceMetric.WithLabelValues(er.poolAddresses[scrollChainId].String(), er.EthAddress[scrollChainId].String()).Set(scPBF)
+	chainAverageBalanceMetric.WithLabelValues("ETH").Set(averageBalanceF)
+
+	return nil
 }
 
-func (er *Exporter) metricWEthFundBalance() {
-	ticker := time.NewTicker(2 * time.Hour)
+func (er *Exporter) metricWEthFundBalance() error {
+
 	var ethereumPoolBalance *big.Int
 	var ethereumChainId uint64
 	var opPoolBalance *big.Int
@@ -294,70 +338,71 @@ func (er *Exporter) metricWEthFundBalance() {
 	var scrollChainId uint64
 	var chainCount uint64
 
-	for {
-		<-ticker.C
-		for chainId, client := range er.ethClients {
-			latestBlockNumber, err := client.GetLatestBlock()
-			if err != nil {
-				log.Errorln("exporter", "client get latest block number fail", err)
-				return
-			}
-
-			balance, err := client.GetERC20Balance(er.WEthAddress[chainId], er.poolAddresses[chainId], latestBlockNumber)
-			if err != nil {
-				log.Errorln("exporter", "client get pool balance fail", err)
-				return
-			}
-			switch chainId {
-			case common2.ChainEthID, common2.ChainEthSepoliaID:
-				ethereumChainId = chainId
-				ethereumPoolBalance = balance
-			case common2.ChainOpID, common2.ChainOpSepoliaID:
-				opChainId = chainId
-				opPoolBalance = balance
-			case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
-				polygonZkEvmChainId = chainId
-				polygonZkEvmPoolBalance = balance
-			case common2.ChainScrollID, common2.ChainScrollSepoliaID:
-				scrollChainId = chainId
-				scrollPoolBalance = balance
-			default:
-				log.Errorln("unknown chain")
-				return
-			}
-			chainCount++
-		}
-		ChainTotalBalance := new(big.Int).Add(ethereumPoolBalance, opPoolBalance)
-		ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
-		ChainTotalBalance.Add(ChainTotalBalance, scrollPoolBalance)
-		ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
-
-		if err := er.metricOpBalance(&opPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, opChainId, ethereumChainId, er.WEthAddress[ethereumChainId].String(), er.WEthAddress[opChainId].String()); err != nil {
-			log.Errorln("metric op weth balance fail", "error", err)
-		}
-		if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.WEthAddress[ethereumChainId].String(), er.WEthAddress[polygonZkEvmChainId].String()); err != nil {
-			log.Errorln("metric polygonZkEvm weth balance fail", "error", err)
-		}
-		if err := er.metricScrollBalance(&scrollPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, scrollChainId, ethereumChainId, er.WEthAddress[ethereumChainId].String(), er.WEthAddress[scrollChainId].String()); err != nil {
-			log.Errorln("metric scroll weth balance fail", "error", err)
+	for chainId, client := range er.ethClients {
+		latestBlockNumber, err := client.GetLatestBlock()
+		if err != nil {
+			log.Errorln("exporter", "client get latest block number fail", err)
+			return err
 		}
 
-		ethPBF, _ := ethereumPoolBalance.Float64()
-		opPBF, _ := opPoolBalance.Float64()
-		pyPBF, _ := polygonZkEvmPoolBalance.Float64()
-		scPBF, _ := scrollPoolBalance.Float64()
-		averageBalanceF, _ := ChainAverageBalance.Float64()
-
-		ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[ethereumChainId].String(), er.WEthAddress[ethereumChainId].String()).Set(ethPBF)
-		opPoolBalanceMetric.WithLabelValues(er.poolAddresses[opChainId].String(), er.WEthAddress[opChainId].String()).Set(opPBF)
-		polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.WEthAddress[polygonZkEvmChainId].String()).Set(pyPBF)
-		scrollPoolBalanceMetric.WithLabelValues(er.poolAddresses[scrollChainId].String(), er.WEthAddress[scrollChainId].String()).Set(scPBF)
-		chainAverageBalanceMetric.WithLabelValues("WETH").Set(averageBalanceF)
+		balance, err := client.GetERC20Balance(er.WEthAddress[chainId], er.poolAddresses[chainId], latestBlockNumber)
+		if err != nil {
+			log.Errorln("exporter", "client get pool balance fail", err)
+			return err
+		}
+		switch chainId {
+		case common2.ChainEthID, common2.ChainEthSepoliaID:
+			ethereumChainId = chainId
+			ethereumPoolBalance = balance
+		case common2.ChainOpID, common2.ChainOpSepoliaID:
+			opChainId = chainId
+			opPoolBalance = balance
+		case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
+			polygonZkEvmChainId = chainId
+			polygonZkEvmPoolBalance = balance
+		case common2.ChainScrollID, common2.ChainScrollSepoliaID:
+			scrollChainId = chainId
+			scrollPoolBalance = balance
+		default:
+			log.Errorln("unknown chain")
+			return errors.New("unknown chain")
+		}
+		chainCount++
 	}
+	ChainTotalBalance := new(big.Int).Add(ethereumPoolBalance, opPoolBalance)
+	ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
+	ChainTotalBalance.Add(ChainTotalBalance, scrollPoolBalance)
+	ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
+
+	if err := er.metricOpBalance(&opPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, opChainId, ethereumChainId, er.WEthAddress[ethereumChainId].String(), er.WEthAddress[opChainId].String()); err != nil {
+		log.Errorln("metric op weth balance fail", "error", err)
+		return err
+	}
+	if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.WEthAddress[ethereumChainId].String(), er.WEthAddress[polygonZkEvmChainId].String()); err != nil {
+		log.Errorln("metric polygonZkEvm weth balance fail", "error", err)
+		return err
+	}
+	if err := er.metricScrollBalance(&scrollPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, scrollChainId, ethereumChainId, er.WEthAddress[ethereumChainId].String(), er.WEthAddress[scrollChainId].String()); err != nil {
+		log.Errorln("metric scroll weth balance fail", "error", err)
+		return err
+	}
+
+	ethPBF, _ := ethereumPoolBalance.Float64()
+	opPBF, _ := opPoolBalance.Float64()
+	pyPBF, _ := polygonZkEvmPoolBalance.Float64()
+	scPBF, _ := scrollPoolBalance.Float64()
+	averageBalanceF, _ := ChainAverageBalance.Float64()
+
+	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[ethereumChainId].String(), er.WEthAddress[ethereumChainId].String()).Set(ethPBF)
+	opPoolBalanceMetric.WithLabelValues(er.poolAddresses[opChainId].String(), er.WEthAddress[opChainId].String()).Set(opPBF)
+	polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.WEthAddress[polygonZkEvmChainId].String()).Set(pyPBF)
+	scrollPoolBalanceMetric.WithLabelValues(er.poolAddresses[scrollChainId].String(), er.WEthAddress[scrollChainId].String()).Set(scPBF)
+	chainAverageBalanceMetric.WithLabelValues("WETH").Set(averageBalanceF)
+
+	return nil
 }
 
-func (er *Exporter) metricUSDTFundBalance() {
-	ticker := time.NewTicker(2 * time.Hour)
+func (er *Exporter) metricUSDTFundBalance() error {
 	var ethereumPoolBalance *big.Int
 	var ethereumChainId uint64
 	var opPoolBalance *big.Int
@@ -368,69 +413,72 @@ func (er *Exporter) metricUSDTFundBalance() {
 	var scrollChainId uint64
 	var chainCount uint64
 
-	for {
-		<-ticker.C
-		for chainId, client := range er.ethClients {
-			latestBlockNumber, err := client.GetLatestBlock()
-			if err != nil {
-				log.Errorln("exporter", "client get latest block number fail", err)
-				return
-			}
-
-			balance, err := client.GetERC20Balance(er.USDTAddress[chainId], er.poolAddresses[chainId], latestBlockNumber)
-			if err != nil {
-				log.Errorln("exporter", "client get pool balance fail", err)
-				return
-			}
-			switch chainId {
-			case common2.ChainEthID, common2.ChainEthSepoliaID:
-				ethereumChainId = chainId
-				ethereumPoolBalance = balance
-			case common2.ChainOpID, common2.ChainOpSepoliaID:
-				opChainId = chainId
-				opPoolBalance = balance
-			case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
-				polygonZkEvmChainId = chainId
-				polygonZkEvmPoolBalance = balance
-			case common2.ChainScrollID, common2.ChainScrollSepoliaID:
-				scrollChainId = chainId
-				scrollPoolBalance = balance
-			default:
-				log.Errorln("unknown chain")
-				return
-			}
-			chainCount++
-		}
-		ChainTotalBalance := new(big.Int).Add(ethereumPoolBalance, opPoolBalance)
-		ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
-		ChainTotalBalance.Add(ChainTotalBalance, scrollPoolBalance)
-		ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
-
-		if err := er.metricOpBalance(&opPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, opChainId, ethereumChainId, er.USDTAddress[ethereumChainId].String(), er.USDTAddress[opChainId].String()); err != nil {
-			log.Errorln("metric op usdt balance fail", "error", err)
-		}
-		if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.USDTAddress[ethereumChainId].String(), er.USDTAddress[polygonZkEvmChainId].String()); err != nil {
-			log.Errorln("metric polygonZkEvm usdt balance fail", "error", err)
-		}
-		if err := er.metricScrollBalance(&scrollPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, scrollChainId, ethereumChainId, er.USDTAddress[ethereumChainId].String(), er.USDTAddress[scrollChainId].String()); err != nil {
-			log.Errorln("metric scroll usdt balance fail", "error", err)
+	for chainId, client := range er.ethClients {
+		latestBlockNumber, err := client.GetLatestBlock()
+		if err != nil {
+			log.Errorln("exporter", "client get latest block number fail", err)
+			return err
 		}
 
-		ethPBF, _ := ethereumPoolBalance.Float64()
-		opPBF, _ := opPoolBalance.Float64()
-		pyPBF, _ := polygonZkEvmPoolBalance.Float64()
-		scPBF, _ := scrollPoolBalance.Float64()
-		averageBalanceF, _ := ChainAverageBalance.Float64()
-
-		ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[ethereumChainId].String(), er.USDTAddress[ethereumChainId].String()).Set(ethPBF)
-		opPoolBalanceMetric.WithLabelValues(er.poolAddresses[opChainId].String(), er.USDTAddress[opChainId].String()).Set(opPBF)
-		polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.USDTAddress[polygonZkEvmChainId].String()).Set(pyPBF)
-		scrollPoolBalanceMetric.WithLabelValues(er.poolAddresses[scrollChainId].String(), er.USDTAddress[scrollChainId].String()).Set(scPBF)
-		chainAverageBalanceMetric.WithLabelValues("USDT").Set(averageBalanceF)
+		balance, err := client.GetERC20Balance(er.USDTAddress[chainId], er.poolAddresses[chainId], latestBlockNumber)
+		if err != nil {
+			log.Errorln("exporter", "client get pool balance fail", err)
+			return err
+		}
+		switch chainId {
+		case common2.ChainEthID, common2.ChainEthSepoliaID:
+			ethereumChainId = chainId
+			ethereumPoolBalance = balance
+		case common2.ChainOpID, common2.ChainOpSepoliaID:
+			opChainId = chainId
+			opPoolBalance = balance
+		case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
+			polygonZkEvmChainId = chainId
+			polygonZkEvmPoolBalance = balance
+		case common2.ChainScrollID, common2.ChainScrollSepoliaID:
+			scrollChainId = chainId
+			scrollPoolBalance = balance
+		default:
+			log.Errorln("unknown chain")
+			return errors.New("unknown chain")
+		}
+		chainCount++
 	}
+	ChainTotalBalance := new(big.Int).Add(ethereumPoolBalance, opPoolBalance)
+	ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
+	ChainTotalBalance.Add(ChainTotalBalance, scrollPoolBalance)
+	ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
+
+	if err := er.metricOpBalance(&opPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, opChainId, ethereumChainId, er.USDTAddress[ethereumChainId].String(), er.USDTAddress[opChainId].String()); err != nil {
+		log.Errorln("metric op usdt balance fail", "error", err)
+		return err
+	}
+	if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.USDTAddress[ethereumChainId].String(), er.USDTAddress[polygonZkEvmChainId].String()); err != nil {
+		log.Errorln("metric polygonZkEvm usdt balance fail", "error", err)
+		return err
+	}
+	if err := er.metricScrollBalance(&scrollPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, scrollChainId, ethereumChainId, er.USDTAddress[ethereumChainId].String(), er.USDTAddress[scrollChainId].String()); err != nil {
+		log.Errorln("metric scroll usdt balance fail", "error", err)
+		return err
+	}
+
+	ethPBF, _ := ethereumPoolBalance.Float64()
+	opPBF, _ := opPoolBalance.Float64()
+	pyPBF, _ := polygonZkEvmPoolBalance.Float64()
+	scPBF, _ := scrollPoolBalance.Float64()
+	averageBalanceF, _ := ChainAverageBalance.Float64()
+
+	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[ethereumChainId].String(), er.USDTAddress[ethereumChainId].String()).Set(ethPBF)
+	opPoolBalanceMetric.WithLabelValues(er.poolAddresses[opChainId].String(), er.USDTAddress[opChainId].String()).Set(opPBF)
+	polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.USDTAddress[polygonZkEvmChainId].String()).Set(pyPBF)
+	scrollPoolBalanceMetric.WithLabelValues(er.poolAddresses[scrollChainId].String(), er.USDTAddress[scrollChainId].String()).Set(scPBF)
+	chainAverageBalanceMetric.WithLabelValues("USDT").Set(averageBalanceF)
+
+	return nil
 }
 
 func (er *Exporter) metricOpBalance(opPoolBalance **big.Int, ethereumPoolBalance **big.Int, ChainAverageBalance *big.Int, TotalChainNum uint64, opChainId uint64, ethereumChainId uint64, l1TokenAddress string, l2TokenAddress string) error {
+	var receipt *types.Receipt
 	ethereumClient := er.ethClients[ethereumChainId]
 	opClient := er.ethClients[opChainId]
 
@@ -442,7 +490,7 @@ func (er *Exporter) metricOpBalance(opPoolBalance **big.Int, ethereumPoolBalance
 			return err
 		}
 
-		tx, err := er.L1BridgeContract.TransferAssertToBridge(opts, new(big.Int).SetUint64(opChainId), common.HexToAddress(common2.ETH), er.poolAddresses[opChainId], transferAmount)
+		tx, err := er.L1BridgeContract.TransferAssertToBridge(opts, new(big.Int).SetUint64(opChainId), er.EthAddress[opChainId], er.poolAddresses[opChainId], transferAmount)
 		if err != nil {
 			log.Errorln("get bridge transaction by abi fail", "error", err)
 			return err
@@ -462,9 +510,9 @@ func (er *Exporter) metricOpBalance(opPoolBalance **big.Int, ethereumPoolBalance
 			return err
 		}
 
-		receipt, err := ethereumClient.TxReceiptDetailByHash(finalTx.Hash())
+		receipt, err = getTransactionReceipt(ethereumClient, *finalTx)
 		if err != nil {
-			log.Errorln("get transaction by hash fail", "error", err)
+			log.Errorln("get bridge transaction receipt fail", "error", err)
 			return err
 		}
 
@@ -499,9 +547,9 @@ func (er *Exporter) metricOpBalance(opPoolBalance **big.Int, ethereumPoolBalance
 			log.Errorln("send bridge transaction fail", "error", err)
 		}
 
-		receipt, err := opClient.TxReceiptDetailByHash(finalTx.Hash())
+		receipt, err = getTransactionReceipt(opClient, *finalTx)
 		if err != nil {
-			log.Errorln("get transaction by hash fail", "error", err)
+			log.Errorln("get bridge transaction receipt fail", "error", err)
 			return err
 		}
 
@@ -528,6 +576,7 @@ func (er *Exporter) metricOpBalance(opPoolBalance **big.Int, ethereumPoolBalance
 }
 
 func (er *Exporter) metricPolygonZkEvmBalance(pyPoolBalance **big.Int, ethereumPoolBalance **big.Int, ChainAverageBalance *big.Int, TotalChainNum uint64, pyChainId uint64, ethereumChainId uint64, l1TokenAddress string, l2TokenAddress string) error {
+	var receipt *types.Receipt
 	ethereumClient := er.ethClients[ethereumChainId]
 	pyClient := er.ethClients[pyChainId]
 
@@ -539,7 +588,7 @@ func (er *Exporter) metricPolygonZkEvmBalance(pyPoolBalance **big.Int, ethereumP
 			return err
 		}
 
-		tx, err := er.L1BridgeContract.TransferAssertToBridge(opts, new(big.Int).SetUint64(pyChainId), common.HexToAddress(common2.ETH), er.poolAddresses[pyChainId], transferAmount)
+		tx, err := er.L1BridgeContract.TransferAssertToBridge(opts, new(big.Int).SetUint64(pyChainId), er.EthAddress[pyChainId], er.poolAddresses[pyChainId], transferAmount)
 		if err != nil {
 			log.Errorln("get bridge transaction by abi fail", "error", err)
 			return err
@@ -559,9 +608,9 @@ func (er *Exporter) metricPolygonZkEvmBalance(pyPoolBalance **big.Int, ethereumP
 			return err
 		}
 
-		receipt, err := ethereumClient.TxReceiptDetailByHash(finalTx.Hash())
+		receipt, err = getTransactionReceipt(ethereumClient, *finalTx)
 		if err != nil {
-			log.Errorln("get transaction by hash fail", "error", err)
+			log.Errorln("get bridge transaction receipt fail", "error", err)
 			return err
 		}
 
@@ -596,9 +645,9 @@ func (er *Exporter) metricPolygonZkEvmBalance(pyPoolBalance **big.Int, ethereumP
 			log.Errorln("send bridge transaction fail", "error", err)
 		}
 
-		receipt, err := pyClient.TxReceiptDetailByHash(finalTx.Hash())
+		receipt, err = getTransactionReceipt(pyClient, *finalTx)
 		if err != nil {
-			log.Errorln("get transaction by hash fail", "error", err)
+			log.Errorln("get bridge transaction receipt fail", "error", err)
 			return err
 		}
 
@@ -625,6 +674,7 @@ func (er *Exporter) metricPolygonZkEvmBalance(pyPoolBalance **big.Int, ethereumP
 }
 
 func (er *Exporter) metricScrollBalance(scrollPoolBalance **big.Int, ethereumPoolBalance **big.Int, ChainAverageBalance *big.Int, TotalChainNum uint64, scrollChainId uint64, ethereumChainId uint64, l1TokenAddress string, l2TokenAddress string) error {
+	var receipt *types.Receipt
 	ethereumClient := er.ethClients[ethereumChainId]
 	scrollClient := er.ethClients[scrollChainId]
 
@@ -636,7 +686,7 @@ func (er *Exporter) metricScrollBalance(scrollPoolBalance **big.Int, ethereumPoo
 			return err
 		}
 
-		tx, err := er.L1BridgeContract.TransferAssertToBridge(opts, new(big.Int).SetUint64(scrollChainId), common.HexToAddress(common2.ETH), er.poolAddresses[scrollChainId], transferAmount)
+		tx, err := er.L1BridgeContract.TransferAssertToBridge(opts, new(big.Int).SetUint64(scrollChainId), er.EthAddress[scrollChainId], er.poolAddresses[scrollChainId], transferAmount)
 		if err != nil {
 			log.Errorln("get bridge transaction by abi fail", "error", err)
 			return err
@@ -656,9 +706,9 @@ func (er *Exporter) metricScrollBalance(scrollPoolBalance **big.Int, ethereumPoo
 			return err
 		}
 
-		receipt, err := ethereumClient.TxReceiptDetailByHash(finalTx.Hash())
+		receipt, err = getTransactionReceipt(ethereumClient, *finalTx)
 		if err != nil {
-			log.Errorln("get transaction by hash fail", "error", err)
+			log.Errorln("get bridge transaction receipt fail", "error", err)
 			return err
 		}
 
@@ -693,9 +743,9 @@ func (er *Exporter) metricScrollBalance(scrollPoolBalance **big.Int, ethereumPoo
 			log.Errorln("send bridge transaction fail", "error", err)
 		}
 
-		receipt, err := scrollClient.TxReceiptDetailByHash(finalTx.Hash())
+		receipt, err = getTransactionReceipt(scrollClient, *finalTx)
 		if err != nil {
-			log.Errorln("get transaction by hash fail", "error", err)
+			log.Errorln("get bridge transaction receipt fail", "error", err)
 			return err
 		}
 
@@ -722,40 +772,39 @@ func (er *Exporter) metricScrollBalance(scrollPoolBalance **big.Int, ethereumPoo
 	return nil
 }
 
-func (er *Exporter) metricEthereumPoolBalance() {
-	ticker := time.NewTicker(60 * time.Second)
-	for {
-		<-ticker.C
-		latestBlockNumber, err := er.ethClients[er.l1ChainID].GetLatestBlock()
-		if err != nil {
-			log.Errorln("get latest block number fail", "err", err)
-			return
-		}
+func (er *Exporter) metricEthereumPoolBalance() error {
 
-		ethBalance, err := er.ethClients[er.l1ChainID].GetBalanceByBlockNumber(er.poolAddresses[er.l1ChainID].String(), latestBlockNumber)
-		if err != nil {
-			log.Errorln("get eth balance by block number fail", "err", err)
-			return
-		}
-		wethBalance, err := er.ethClients[er.l1ChainID].GetERC20Balance(er.WEthAddress[er.l1ChainID], er.poolAddresses[er.l1ChainID], latestBlockNumber)
-		if err != nil {
-			log.Errorln("get weth balance by block number fail", "err", err)
-			return
-		}
-		usdtBalance, err := er.ethClients[er.l1ChainID].GetERC20Balance(er.USDTAddress[er.l1ChainID], er.poolAddresses[er.l1ChainID], latestBlockNumber)
-		if err != nil {
-			log.Errorln("get usdt balance by block number fail", "err", err)
-			return
-		}
-
-		eBF, _ := ethBalance.Float64()
-		wBF, _ := wethBalance.Float64()
-		uBF, _ := usdtBalance.Float64()
-
-		ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.EthAddress[er.l1ChainID].String()).Set(eBF)
-		ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.EthAddress[er.l1ChainID].String()).Set(wBF)
-		ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.EthAddress[er.l1ChainID].String()).Set(uBF)
+	latestBlockNumber, err := er.ethClients[er.l1ChainID].GetLatestBlock()
+	if err != nil {
+		log.Errorln("get latest block number fail", "err", err)
+		return err
 	}
+
+	ethBalance, err := er.ethClients[er.l1ChainID].GetBalanceByBlockNumber(er.poolAddresses[er.l1ChainID].String(), latestBlockNumber)
+	if err != nil {
+		log.Errorln("get eth balance by block number fail", "err", err)
+		return err
+	}
+	wethBalance, err := er.ethClients[er.l1ChainID].GetERC20Balance(er.WEthAddress[er.l1ChainID], er.poolAddresses[er.l1ChainID], latestBlockNumber)
+	if err != nil {
+		log.Errorln("get weth balance by block number fail", "err", err)
+		return err
+	}
+	usdtBalance, err := er.ethClients[er.l1ChainID].GetERC20Balance(er.USDTAddress[er.l1ChainID], er.poolAddresses[er.l1ChainID], latestBlockNumber)
+	if err != nil {
+		log.Errorln("get usdt balance by block number fail", "err", err)
+		return err
+	}
+
+	eBF, _ := ethBalance.Float64()
+	wBF, _ := wethBalance.Float64()
+	uBF, _ := usdtBalance.Float64()
+
+	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.EthAddress[er.l1ChainID].String()).Set(eBF)
+	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.EthAddress[er.l1ChainID].String()).Set(wBF)
+	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.EthAddress[er.l1ChainID].String()).Set(uBF)
+
+	return nil
 }
 
 func (er *Exporter) getSignOpts(chainId uint64) (*bind.TransactOpts, error) {
@@ -795,5 +844,30 @@ func (er *Exporter) getSignOpts(chainId uint64) (*bind.TransactOpts, error) {
 			return nil, err
 		}
 	}
+
+	opts.Context = context.Background()
+	opts.NoSend = true
+
 	return opts, err
+}
+
+func getTransactionReceipt(client node.EthClient, tx types.Transaction) (*types.Receipt, error) {
+	var receipt *types.Receipt
+	var err error
+	var ctx = context.Background()
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 30_000_000_000, Max: 60_000_000_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+
+		receipt, err = client.TxReceiptDetailByHash(tx.Hash())
+		if err != nil && !errors.Is(err, ethereum.NotFound) {
+			log.Errorln("get transaction by hash fail", "error", err)
+			return nil, err
+		}
+		return nil, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return receipt, nil
 }
