@@ -195,7 +195,7 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		for range CTSTicker.C {
 			err := s.ChangeTransactionStatus()
 			if err != nil {
-				return err
+				log.Error(err.Error())
 			}
 		}
 		return nil
@@ -206,7 +206,7 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		for range SBTTicker.C {
 			err := s.SendBridgeTransaction()
 			if err != nil {
-				return err
+				log.Error(err.Error())
 			}
 		}
 		return nil
