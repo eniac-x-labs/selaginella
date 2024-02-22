@@ -30,6 +30,8 @@ spec:
       containers:
         - name: {{ .Release.Name }}
           envFrom:
+          - configRef:
+            name: selaginella-config
           - secretRef:
             name: selaginella-secret
           securityContext:
