@@ -23,7 +23,6 @@ COPY --from=builder /app/selaginella/selaginella.yaml /app/selaginella/selaginel
 COPY --from=builder /app/selaginella/migrations /app/selaginella/migrations
 
 WORKDIR /app
-
 ENV SELAGINELLA_MIGRATIONS_DIR="/app/selaginella/migrations"
 ENV SELAGINELLA_CONFIG="/app/selaginella/selaginella.yaml"
 
