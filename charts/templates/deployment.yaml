@@ -30,7 +30,7 @@ spec:
       containers:
         - name: {{ .Release.Name }}
           envFrom:
-          - configRef:
+          - configMapRef:
             name: selaginella-config
           - secretRef:
             name: selaginella-secret
