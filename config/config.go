@@ -26,6 +26,8 @@ type RPC struct {
 	EthAddress          string `yaml:"eth_address"`
 	WEthAddress         string `yaml:"weth_address"`
 	USDTAddress         string `yaml:"usdt_address"`
+	USDCAddress         string `yaml:"usdc_address"`
+	DAIAddress          string `yaml:"dai_address"`
 }
 
 type Exporter struct {

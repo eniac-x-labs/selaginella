@@ -53,6 +53,7 @@ type CrossChainTransferView interface {
 	CrossChainTransferByTxHash(txHash string) (*CrossChainTransfer, error)
 	OldestPendingSentTransaction() (*CrossChainTransfer, error)
 	OldestPendingNoSentTransaction() (*CrossChainTransfer, error)
+	GetPeriodTotalFee(startTimestamp uint64, endTimeStamp uint64, tokenAddress common.Address) (*big.Int, error)
 }
 
 type crossChainTransferDB struct {
@@ -185,4 +186,13 @@ func (c *crossChainTransferDB) UpdateCrossChainTransferTransactionHash(transfer 
 		return result.Error
 	}
 	return nil
+}
+
+func (c *crossChainTransferDB) GetPeriodTotalFee(startTimestamp uint64, endTimeStamp uint64, tokenAddress common.Address) (*big.Int, error) {
+	var totalFee *big.Int
+	err := c.gorm.Table("cross_chain_transfer").Where("timestamp >= ? and timestamp < ? and token_address = ?", startTimestamp, endTimeStamp, tokenAddress.String()).Select("SUM(fee) as total_fee").Row().Scan(&totalFee)
+	if err != nil {
+		return nil, err
+	}
+	return totalFee, nil
 }

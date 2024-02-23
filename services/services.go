@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/evm-layer2/selaginella/bindings"
@@ -60,6 +61,11 @@ type RpcServer struct {
 	L2BridgeContract    map[uint64]*bindings.L2PoolManager
 	EthAddress          map[uint64]common.Address
 	WEthAddress         map[uint64]common.Address
+	USDTAddress         map[uint64]common.Address
+	USDCAddress         map[uint64]common.Address
+	DAIAddress          map[uint64]common.Address
+	poolStartTimestamp  uint32
+	poolEndTimestamp    uint32
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
@@ -85,6 +91,10 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	l2BridgeContracts := make(map[uint64]*bindings.L2PoolManager)
 	EthAddress := make(map[uint64]common.Address)
 	WEthAddress := make(map[uint64]common.Address)
+	USDTAddress := make(map[uint64]common.Address)
+	USDCAddress := make(map[uint64]common.Address)
+	DAIAddress := make(map[uint64]common.Address)
+
 	for i := range chainRpcCfg {
 		if chainRpcCfg[i].ChainId == l1ChainID {
 			client, err := node.DialEthClient(ctx, chainRpcCfg[i].RpcUrl)
@@ -113,6 +123,9 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			l1BridgeContract = l1PoolContract
 			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)
 			WEthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].WEthAddress)
+			USDTAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].USDTAddress)
+			USDCAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].USDCAddress)
+			DAIAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].DAIAddress)
 
 		} else {
 			client, err := node.DialEthClient(ctx, chainRpcCfg[i].RpcUrl)
@@ -141,7 +154,9 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			l2BridgeContracts[chainRpcCfg[i].ChainId] = l2PoolContract
 			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)
 			WEthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].WEthAddress)
-
+			USDTAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].USDTAddress)
+			USDCAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].USDCAddress)
+			DAIAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].DAIAddress)
 		}
 
 	}
@@ -212,6 +227,17 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
+	CPTicker := time.NewTicker(1 * time.Hour)
+	s.tasks.Go(func() error {
+		for range CPTicker.C {
+			err := s.CompletePoolAndNew()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
 	return nil
 }
 
@@ -275,6 +301,66 @@ func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainT
 	}, nil
 }
 
+func (s *RpcServer) UpdateFundingPoolBalance(ctx context.Context, in *pb.UpdateFundingPoolBalanceRequest) (*pb.UpdateFundingPoolBalanceResponse, error) {
+	if in == nil {
+		log.Warn("invalid request: request body is empty")
+		return nil, errors.New("invalid request: request body is empty")
+	}
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var err error
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+
+	dci, _ := new(big.Int).SetString(in.DestChainId, 10)
+	amount, _ := new(big.Int).SetString(in.Amount, 10)
+
+	latestBlock, err := s.ethClients[dci.Uint64()].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return nil, err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	balance, err := s.L2BridgeContract[dci.Uint64()].FundingPoolBalance(cOpts, common.HexToAddress(in.TokenAddress))
+	if err != nil {
+		log.Error("get l2 bridge funding pool balance fail", "err", err)
+		return nil, err
+	}
+
+	tOpts, err = s.newTransactOpts(ctx, dci.Uint64())
+	if err != nil {
+		log.Error("get transactOpts fail", "err", err)
+		return nil, err
+	}
+
+	tx, err := s.L2BridgeContract[dci.Uint64()].UpdateFundingPoolBalance(tOpts, common.HexToAddress(in.TokenAddress), new(big.Int).Add(balance, amount))
+	finalTx, err = s.RawL2BridgeContract[dci.Uint64()].RawTransact(tOpts, tx.Data())
+	if err != nil {
+		log.Error("raw send update funding pool balance transaction fail", "error", err)
+		return nil, err
+	}
+	err = s.ethClients[dci.Uint64()].SendTransaction(ctx, finalTx)
+	if err != nil {
+		log.Error("send update funding pool balance transaction fail", "error", err)
+		return nil, err
+	}
+	receipt, err = getTransactionReceipt(s.ethClients[dci.Uint64()], *finalTx)
+	if err != nil {
+		log.Error("get update funding pool balance receipt fail", "error", err)
+		return nil, err
+	}
+	log.Info("update funding pool balance success", "tx_hash", receipt.TxHash)
+
+	return &pb.UpdateFundingPoolBalanceResponse{
+		Success: true,
+		Message: "call cross chain transfer success",
+	}, nil
+}
 func (s *RpcServer) SendBridgeTransaction() error {
 
 	var opts *bind.TransactOpts
@@ -292,40 +378,10 @@ func (s *RpcServer) SendBridgeTransaction() error {
 
 	for chainId, client := range s.ethClients {
 		if chainId == bridgeTx.DestChainId.Uint64() {
-			if s.EnableHsm {
-				seqBytes, err := hex.DecodeString(s.HsmCreden)
-				if err != nil {
-					log.Error("selaginella", "decode hsm creden fail", err.Error())
-				}
-				apikey := option.WithCredentialsJSON(seqBytes)
-				kClient, err := kms.NewKeyManagementClient(context.Background(), apikey)
-				if err != nil {
-					log.Error("selaginella", "create signer error", err.Error())
-				}
-				mk := &sign.ManagedKey{
-					KeyName:      s.HsmAPIName,
-					EthereumAddr: common.HexToAddress(s.HsmAddress),
-					Gclient:      kClient,
-				}
-				opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), new(big.Int).SetUint64(chainId))
-				if err != nil {
-					log.Error("selaginella", "create signer error", err.Error())
-				}
-			} else {
-				if s.privateKey == nil {
-					log.Error("selaginella", "create signer error", err.Error())
-					return errors.New("no private key provided")
-				}
-
-				opts, err = bind.NewKeyedTransactorWithChainID(s.privateKey, new(big.Int).SetUint64(chainId))
-				if err != nil {
-					log.Error("new keyed transactor fail", "err", err)
-					return err
-				}
+			opts, err = s.newTransactOpts(ctx, chainId)
+			if err != nil {
+				return err
 			}
-
-			opts.Context = ctx
-			opts.NoSend = true
 
 			log.Info(fmt.Sprintf("get send transaction request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v", bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce))
 
@@ -452,4 +508,196 @@ func (s *RpcServer) ChangeTransactionStatus() error {
 	log.Info("change transaction status success", "txHash", receipt.TxHash)
 
 	return nil
+}
+
+func (s *RpcServer) newTransactOpts(ctx context.Context, chainId uint64) (*bind.TransactOpts, error) {
+	var opts *bind.TransactOpts
+	var err error
+
+	if s.EnableHsm {
+		seqBytes, err := hex.DecodeString(s.HsmCreden)
+		if err != nil {
+			log.Error("selaginella", "decode hsm creden fail", err.Error())
+		}
+		apikey := option.WithCredentialsJSON(seqBytes)
+		kClient, err := kms.NewKeyManagementClient(context.Background(), apikey)
+		if err != nil {
+			log.Error("selaginella", "create signer error", err.Error())
+		}
+		mk := &sign.ManagedKey{
+			KeyName:      s.HsmAPIName,
+			EthereumAddr: common.HexToAddress(s.HsmAddress),
+			Gclient:      kClient,
+		}
+		opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), new(big.Int).SetUint64(chainId))
+		if err != nil {
+			log.Error("selaginella", "create signer error", err.Error())
+		}
+	} else {
+		if s.privateKey == nil {
+			log.Error("selaginella", "create signer error", err.Error())
+			return nil, errors.New("no private key provided")
+		}
+
+		opts, err = bind.NewKeyedTransactorWithChainID(s.privateKey, new(big.Int).SetUint64(chainId))
+		if err != nil {
+			log.Error("new keyed transactor fail", "err", err)
+			return nil, err
+		}
+	}
+
+	opts.Context = ctx
+	opts.NoSend = true
+
+	return opts, err
+}
+
+func (s *RpcServer) CompletePoolAndNew() error {
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var err error
+	var newPools []bindings.IL1PoolManagerPool
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+	var ctx = context.Background()
+
+	latestBlock, err := s.ethClients[s.l1ChainID].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	ethPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.EthAddress[s.l1ChainID])
+	wethPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.WEthAddress[s.l1ChainID])
+	usdtPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.USDTAddress[s.l1ChainID])
+	usdcPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.USDCAddress[s.l1ChainID])
+	daiPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.DAIAddress[s.l1ChainID])
+	if err != nil {
+		log.Error("get pool length fail", "err", err)
+		return err
+	}
+
+	l1EthPool, err := s.L1BridgeContract.GetPool(cOpts, s.EthAddress[s.l1ChainID], new(big.Int).Sub(ethPoolLength, new(big.Int).SetUint64(1)))
+	l1WthPool, err := s.L1BridgeContract.GetPool(cOpts, s.WEthAddress[s.l1ChainID], new(big.Int).Sub(wethPoolLength, new(big.Int).SetUint64(1)))
+	l1UsdtPool, err := s.L1BridgeContract.GetPool(cOpts, s.USDTAddress[s.l1ChainID], new(big.Int).Sub(usdtPoolLength, new(big.Int).SetUint64(1)))
+	l1UsdcPool, err := s.L1BridgeContract.GetPool(cOpts, s.USDCAddress[s.l1ChainID], new(big.Int).Sub(usdcPoolLength, new(big.Int).SetUint64(1)))
+	l1DaiPool, err := s.L1BridgeContract.GetPool(cOpts, s.DAIAddress[s.l1ChainID], new(big.Int).Sub(daiPoolLength, new(big.Int).SetUint64(1)))
+	if err != nil {
+		log.Error("get pool fail", "err", err)
+		return err
+	}
+
+	s.poolStartTimestamp = l1EthPool.StartTimestamp
+	s.poolEndTimestamp = l1EthPool.EndTimestamp
+
+	if time.Now().Unix() >= int64(s.poolEndTimestamp) {
+		tOpts, err = s.newTransactOpts(ctx, s.l1ChainID)
+
+		newPools, err = s.newPools(l1EthPool, l1WthPool, l1UsdtPool, l1UsdcPool, l1DaiPool)
+		if err != nil {
+			return err
+		}
+
+		tx, err = s.L1BridgeContract.CompletePoolAndNew(tOpts, newPools)
+		if err != nil {
+			log.Error("get l1 bridge complete pool and new by abi fail", "error", err)
+			return err
+		}
+		finalTx, err = s.RawL1BridgeContract.RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw send complete pool and new transaction fail", "error", err)
+			return err
+		}
+		err = s.ethClients[s.l1ChainID].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send complete pool and new transaction fail", "error", err)
+			return err
+		}
+		receipt, err = getTransactionReceipt(s.ethClients[s.l1ChainID], *finalTx)
+		if err != nil {
+			log.Error("get complete pool and new receipt fail", "error", err)
+			return err
+		}
+
+		log.Info("send complete pool and new transaction success", "tx_hash", receipt.TxHash)
+
+	}
+
+	return nil
+}
+
+func getTransactionReceipt(client node.EthClient, tx types.Transaction) (*types.Receipt, error) {
+	var receipt *types.Receipt
+	var err error
+	var ctx = context.Background()
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 30_000_000_000, Max: 60_000_000_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		receipt, err = client.TxReceiptDetailByHash(tx.Hash())
+		if err != nil && !errors.Is(err, ethereum.NotFound) {
+			log.Error("get transaction by hash fail", "error", err)
+			return nil, err
+		}
+		return nil, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return receipt, nil
+}
+
+func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindings.IL1PoolManagerPool, usdtPool bindings.IL1PoolManagerPool, usdcPool bindings.IL1PoolManagerPool, daiPool bindings.IL1PoolManagerPool) ([]bindings.IL1PoolManagerPool, error) {
+	var newPools []bindings.IL1PoolManagerPool
+	var newPool bindings.IL1PoolManagerPool
+	var totalFee *big.Int
+	var err error
+
+	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+		newPool.Token = s.EthAddress[s.l1ChainID]
+		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.EthAddress[s.l1ChainID])
+		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
+		newFee.Div(newFee, big.NewInt(100))
+		newPool.TotalFee = newFee
+		newPools = append(newPools, newPool)
+	}
+	if wethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+		newPool.Token = s.WEthAddress[s.l1ChainID]
+		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.WEthAddress[s.l1ChainID])
+		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
+		newFee.Div(newFee, big.NewInt(100))
+		newPool.TotalFee = newFee
+		newPools = append(newPools, newPool)
+	}
+	if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+		newPool.Token = s.USDTAddress[s.l1ChainID]
+		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDTAddress[s.l1ChainID])
+		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
+		newFee.Div(newFee, big.NewInt(100))
+		newPool.TotalFee = newFee
+		newPools = append(newPools, newPool)
+	}
+	if usdcPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+		newPool.Token = s.USDCAddress[s.l1ChainID]
+		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDCAddress[s.l1ChainID])
+		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
+		newFee.Div(newFee, big.NewInt(100))
+		newPool.TotalFee = newFee
+		newPools = append(newPools, newPool)
+	}
+	if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+		newPool.Token = s.DAIAddress[s.l1ChainID]
+		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.DAIAddress[s.l1ChainID])
+		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
+		newFee.Div(newFee, big.NewInt(100))
+		newPool.TotalFee = newFee
+		newPools = append(newPools, newPool)
+	}
+
+	return newPools, err
 }
