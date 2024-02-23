@@ -1,0 +1,72 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+metrics:
+  host: 0.0.0.0
+  port: 8081
+
+rpcs:
+  - rpc_url: 'https://rpc.ankr.com/eth/7b0caac2853c9795d0a005c5f7696acc7be9adc22ef8504a56a5aeff2ad9ce0a'
+    chain_id: 1
+    founding_pool_address: '0x1DE4c1C613aA0Ba3F52eEa56D2D0632e252B9E5F'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+    usdt_address: '0xdAC17F958D2ee523a2206206994597C13D831ec7'
+    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+
+  - rpc_url: 'https://rpc.ankr.com/scroll/7b0caac2853c9795d0a005c5f7696acc7be9adc22ef8504a56a5aeff2ad9ce0a'
+    chain_id: 534352
+    founding_pool_address: '0x9738C3259C3C172095c22de015D66416C76Ee40F'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0x5300000000000000000000000000000000000004'
+    usdt_address: '0xf55BEC9cafDbE8730f096Aa55dad6D22d44099Df'
+    usdc_address: '0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4'
+    dai_address: '0xcA77eB3fEFe3725Dc33bccB54eDEFc3D9f764f97'
+
+  - rpc_url: 'https://rpc.ankr.com/polygon_zkevm/7b0caac2853c9795d0a005c5f7696acc7be9adc22ef8504a56a5aeff2ad9ce0a'
+    chain_id: 1101
+    founding_pool_address: '0x54FC63B55b18697820601206a6C0AE0e671d63Fd'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0x4F9A0e7FD2Bf6067db6994CF12E4495Df938E6e9'
+    usdt_address: '0x1E4a5963aBFD975d8c9021ce480b42188849D41d'
+    usdc_address: '0xA8CE8aee21bC2A48a5EF670afCc9274C7bbbC035'
+    dai_address: '0xC5015b9d9161Dca7e18e32f6f25C4aD850731Fd4'
+
+  - rpc_url: 'https://rpc.ankr.com/optimism/7b0caac2853c9795d0a005c5f7696acc7be9adc22ef8504a56a5aeff2ad9ce0a'
+    chain_id: 10
+    founding_pool_address: '0xb0221487B9FEF4F391b310338Fd0740f2797fBB1'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0x4200000000000000000000000000000000000006'
+    usdt_address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58'
+    usdc_address: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85'
+    dai_address: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'
+
+  - rpc_url: 'https://rpc.ankr.com/base/7b0caac2853c9795d0a005c5f7696acc7be9adc22ef8504a56a5aeff2ad9ce0a'
+    chain_id: 8453
+    founding_pool_address: '0x0DF967269C10f959CaFcE3B10acA4Af97a5DaDfF'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0x4200000000000000000000000000000000000006'
+    usdt_address: ''
+    usdc_address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+    dai_address: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb'
+
+  - rpc_url: 'https://rpc.ankr.com/arbitrum/7b0caac2853c9795d0a005c5f7696acc7be9adc22ef8504a56a5aeff2ad9ce0a'
+    chain_id: 42161
+    founding_pool_address: '0x89bc318D74eE9B3b28252Ae94444414676d480F4'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
+    usdt_address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'
+    usdc_address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'
+    dai_address: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'
+
+database:
+  db_host: "postgresql"
+  db_port: 5432
+  db_user: "postgres"
+  db_password: "vVb9NhLYui"
+  db_name: "selaginella"
+
+
+

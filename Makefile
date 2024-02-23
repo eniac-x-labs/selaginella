@@ -36,7 +36,7 @@ binding-l1p:
 	$(eval temp := $(shell mktemp))
 
 	cat $(L1POOL_ABI_ARTIFACT) \
-	| jq -r .bytecode > $(temp)
+	| jq -r .bytecode.object > $(temp)
 
 	cat $(L1POOL_ABI_ARTIFACT) \
 	| jq .abi \
@@ -52,7 +52,7 @@ binding-l2p:
 	$(eval temp := $(shell mktemp))
 
 	cat $(L2POOL_ABI_ARTIFACT) \
-	| jq -r .bytecode > $(temp)
+	| jq -r .bytecode.object > $(temp)
 
 	cat $(L2POOL_ABI_ARTIFACT) \
 	| jq .abi \

@@ -10,38 +10,56 @@ rpcs:
   - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/o0zYyGdlny_0bvOGS8qtNdMG4REyM0I_'
     chain_id: 11155111
     founding_pool_address: '0x1DE4c1C613aA0Ba3F52eEa56D2D0632e252B9E5F'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
     weth_address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'
-    usdt_address: ''
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    dai_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
 
   - rpc_url: 'https://scroll-sepolia.blockpi.network/v1/rpc/public'
     chain_id: 534351
     founding_pool_address: '0x9738C3259C3C172095c22de015D66416C76Ee40F'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
     weth_address: '0x5300000000000000000000000000000000000004'
-    usdt_address: ''
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
   - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
     chain_id: 1442
     founding_pool_address: '0x54FC63B55b18697820601206a6C0AE0e671d63Fd'
+    eth_address: '0x0000000000000000000000000000000000000000'
     weth_address: '0x2ad78787CCaf7FA8FAe8953FD78ab9163f81DcC8'
-    usdt_address: ''
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
     founding_pool_address: '0xb0221487B9FEF4F391b310338Fd0740f2797fBB1'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
     weth_address: '0x4200000000000000000000000000000000000006'
-    usdt_address: ''
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
   - rpc_url: 'https://base-sepolia.g.alchemy.com/v2/XBMhzm0JcYtvq35NAbDOxEVI3NzqgAb3'
     chain_id: 84532
     founding_pool_address: '0x0DF967269C10f959CaFcE3B10acA4Af97a5DaDfF'
+    eth_address: '0x0000000000000000000000000000000000000000'
     weth_address: '0x4200000000000000000000000000000000000006'
-    usdt_address: ''
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
   - rpc_url: 'https://arb-sepolia.g.alchemy.com/v2/NBY1oJ2p9rGIqN2uvX_2gpc0eSkGWw1l'
     chain_id: 421614
     founding_pool_address: '0x89bc318D74eE9B3b28252Ae94444414676d480F4'
+    eth_address: '0x0000000000000000000000000000000000000000'
     weth_address: '0x4200000000000000000000000000000000000006'
-    usdt_address: ''
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
 database:
   db_host: "postgresql"
