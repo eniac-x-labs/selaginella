@@ -31,7 +31,7 @@ type RPC struct {
 }
 
 type Exporter struct {
-	ExportAddress string
+	ExporterAddress string `yaml:"exporter_address"`
 }
 
 type Config struct {
