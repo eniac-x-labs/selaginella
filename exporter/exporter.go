@@ -176,7 +176,7 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 
 func (er *Exporter) Start(ctx context.Context) error {
 
-	log.Infoln("exporter config", er.exporterConfig.ExportAddress)
+	log.Infoln("exporter config", er.exporterConfig.ExporterAddress)
 	log.Infoln("Starting selaginella_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 	http.Handle("/metrics", promhttp.Handler())
@@ -190,74 +190,74 @@ func (er *Exporter) Start(ctx context.Context) error {
 		</html>`))
 	})
 
-	eFBTicker := time.NewTicker(2 * time.Hour)
-	er.tasks.Go(func() error {
-		for range eFBTicker.C {
-			err := er.metricEthFundBalance()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	//eFBTicker := time.NewTicker(2 * time.Hour)
+	//er.tasks.Go(func() error {
+	//	for range eFBTicker.C {
+	//		err := er.metricEthFundBalance()
+	//		if err != nil {
+	//			log.Error(err.Error())
+	//		}
+	//	}
+	//	return nil
+	//})
 
-	wFBTicker := time.NewTicker(2 * time.Hour)
-	er.tasks.Go(func() error {
-		for range wFBTicker.C {
-			err := er.metricWEthFundBalance()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	uTFBTicker := time.NewTicker(2 * time.Hour)
-	er.tasks.Go(func() error {
-		for range uTFBTicker.C {
-			err := er.metricUSDTFundBalance()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	uCFBTicker := time.NewTicker(2 * time.Hour)
-	er.tasks.Go(func() error {
-		for range uCFBTicker.C {
-			err := er.metricUSDCFundBalance()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	dFBTicker := time.NewTicker(2 * time.Hour)
-	er.tasks.Go(func() error {
-		for range dFBTicker.C {
-			err := er.metricDAIFundBalance()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	//wFBTicker := time.NewTicker(2 * time.Hour)
+	//er.tasks.Go(func() error {
+	//	for range wFBTicker.C {
+	//		err := er.metricWEthFundBalance()
+	//		if err != nil {
+	//      	log.Error(err.Error())
+	//		}
+	//	}
+	//	return nil
+	//})
+	//
+	//uTFBTicker := time.NewTicker(2 * time.Hour)
+	//er.tasks.Go(func() error {
+	//	for range uTFBTicker.C {
+	//		err := er.metricUSDTFundBalance()
+	//		if err != nil {
+	//			log.Error(err.Error())
+	//		}
+	//	}
+	//	return nil
+	//})
+	//
+	//uCFBTicker := time.NewTicker(2 * time.Hour)
+	//er.tasks.Go(func() error {
+	//	for range uCFBTicker.C {
+	//		err := er.metricUSDCFundBalance()
+	//		if err != nil {
+	//			log.Error(err.Error())
+	//		}
+	//	}
+	//	return nil
+	//})
+	//
+	//dFBTicker := time.NewTicker(2 * time.Hour)
+	//er.tasks.Go(func() error {
+	//	for range dFBTicker.C {
+	//		err := er.metricDAIFundBalance()
+	//		if err != nil {
+	//			log.Error(err.Error())
+	//		}
+	//	}
+	//	return nil
+	//})
 
 	ePBTicker := time.NewTicker(1 * time.Minute)
 	er.tasks.Go(func() error {
 		for range ePBTicker.C {
 			err := er.metricEthereumPoolBalance()
 			if err != nil {
-				return err
+				log.Error(err.Error())
 			}
 		}
 		return nil
 	})
 
-	log.Infoln("Listening on", er.exporterConfig.ExportAddress)
-	if err := http.ListenAndServe(er.exporterConfig.ExportAddress, nil); err != nil {
+	log.Infoln("Listening on", er.exporterConfig.ExporterAddress)
+	if err := http.ListenAndServe(er.exporterConfig.ExporterAddress, nil); err != nil {
 		log.Fatal(err)
 		return err
 	}
@@ -922,6 +922,7 @@ func (er *Exporter) metricEthereumPoolBalance() error {
 	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.USDCAddress[er.l1ChainID].String()).Set(uCBF)
 	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[er.l1ChainID].String(), er.DAIAddress[er.l1ChainID].String()).Set(dBF)
 
+	log.Infoln("get l1 pool balance success")
 	return nil
 }
 

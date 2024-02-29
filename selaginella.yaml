@@ -7,18 +7,18 @@ metrics:
   port: 8081
 
 rpcs:
-  - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/o0zYyGdlny_0bvOGS8qtNdMG4REyM0I_'
+  - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/13PoJNZA67XxE87RJ8ZFyGkWKRGcOOgY'
     chain_id: 11155111
-    founding_pool_address: '0x1DE4c1C613aA0Ba3F52eEa56D2D0632e252B9E5F'
+    founding_pool_address: '0x92b274c40776A1100c098E39217F8190940B3E9d'
     eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
     weth_address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'
     usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-    dai_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+    dai_address: '0x4200000000000000000000000000000000000006'
 
   - rpc_url: 'https://scroll-sepolia.blockpi.network/v1/rpc/public'
     chain_id: 534351
-    founding_pool_address: '0x9738C3259C3C172095c22de015D66416C76Ee40F'
+    founding_pool_address: '0x42D576775118bA658a288cD8D81cAF9FdF4Fe60E'
     eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
     weth_address: '0x5300000000000000000000000000000000000004'
     usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
@@ -36,7 +36,7 @@ rpcs:
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
-    founding_pool_address: '0xb0221487B9FEF4F391b310338Fd0740f2797fBB1'
+    founding_pool_address: '0xfE22239D8bd170fA2c06AE387C4F0Ba6a0e9F954'
     eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
     weth_address: '0x4200000000000000000000000000000000000006'
     usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
@@ -54,7 +54,7 @@ rpcs:
 
   - rpc_url: 'https://arb-sepolia.g.alchemy.com/v2/NBY1oJ2p9rGIqN2uvX_2gpc0eSkGWw1l'
     chain_id: 421614
-    founding_pool_address: '0x89bc318D74eE9B3b28252Ae94444414676d480F4'
+    founding_pool_address: '0xb5d6578839262fdb7cb4C61CB581f352a5718021'
     eth_address: '0x0000000000000000000000000000000000000000'
     weth_address: '0x4200000000000000000000000000000000000006'
     usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
@@ -68,5 +68,6 @@ database:
   db_password: "vVb9NhLYui"
   db_name: "selaginella"
 
-
+exporter:
+  exporter_address: "0.0.0.0:8081"
 
