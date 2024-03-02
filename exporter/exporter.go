@@ -312,6 +312,9 @@ func (er *Exporter) metricEthFundBalance() error {
 		if chainId == er.l1ChainID {
 			balance, err = er.L1BridgeContract.FundingPoolBalance(cOpts, er.EthAddress[chainId])
 		} else {
+			if chainId == 1442 {
+				continue
+			}
 			balance, err = er.L2BridgeContract[chainId].FundingPoolBalance(cOpts, er.EthAddress[chainId])
 		}
 		if err != nil {
