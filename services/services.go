@@ -359,56 +359,6 @@ func (s *RpcServer) UpdateFundingPoolBalance(ctx context.Context, in *pb.UpdateF
 		return nil, err
 	}
 
-	var cOpts *bind.CallOpts
-	var tOpts *bind.TransactOpts
-	var err error
-	var finalTx *types.Transaction
-	var receipt *types.Receipt
-
-	dci, _ := new(big.Int).SetString(in.DestChainId, 10)
-	amount, _ := new(big.Int).SetString(in.Amount, 10)
-
-	latestBlock, err := s.ethClients[dci.Uint64()].GetLatestBlock()
-	if err != nil {
-		log.Error("get latest block number fail", "err", err)
-		return nil, err
-	}
-
-	cOpts = &bind.CallOpts{
-		BlockNumber: latestBlock,
-		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
-	}
-
-	balance, err := s.L2BridgeContract[dci.Uint64()].FundingPoolBalance(cOpts, common.HexToAddress(in.TokenAddress))
-	if err != nil {
-		log.Error("get l2 bridge funding pool balance fail", "err", err)
-		return nil, err
-	}
-
-	tOpts, err = s.newTransactOpts(ctx, dci.Uint64())
-	if err != nil {
-		log.Error("get transactOpts fail", "err", err)
-		return nil, err
-	}
-
-	tx, err := s.L2BridgeContract[dci.Uint64()].UpdateFundingPoolBalance(tOpts, common.HexToAddress(in.TokenAddress), new(big.Int).Add(balance, amount))
-	finalTx, err = s.RawL2BridgeContract[dci.Uint64()].RawTransact(tOpts, tx.Data())
-	if err != nil {
-		log.Error("raw send update funding pool balance transaction fail", "error", err)
-		return nil, err
-	}
-	err = s.ethClients[dci.Uint64()].SendTransaction(ctx, finalTx)
-	if err != nil {
-		log.Error("send update funding pool balance transaction fail", "error", err)
-		return nil, err
-	}
-	receipt, err = getTransactionReceipt(s.ethClients[dci.Uint64()], *finalTx)
-	if err != nil {
-		log.Error("get update funding pool balance receipt fail", "error", err)
-		return nil, err
-	}
-	log.Info("update funding pool balance success", "tx_hash", receipt.TxHash)
-
 	return &pb.UpdateFundingPoolBalanceResponse{
 		Success: true,
 		Message: "call cross chain transfer success",
