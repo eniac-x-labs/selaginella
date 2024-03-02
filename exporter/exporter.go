@@ -190,7 +190,7 @@ func (er *Exporter) Start(ctx context.Context) error {
 		</html>`))
 	})
 
-	eFBTicker := time.NewTicker(2 * time.Hour)
+	eFBTicker := time.NewTicker(15 * time.Minute)
 	er.tasks.Go(func() error {
 		for range eFBTicker.C {
 			err := er.metricEthFundBalance()
