@@ -190,7 +190,7 @@ func (er *Exporter) Start(ctx context.Context) error {
 		</html>`))
 	})
 
-	eFBTicker := time.NewTicker(15 * time.Minute)
+	eFBTicker := time.NewTicker(1 * time.Minute)
 	er.tasks.Go(func() error {
 		for range eFBTicker.C {
 			err := er.metricEthFundBalance()
@@ -312,12 +312,13 @@ func (er *Exporter) metricEthFundBalance() error {
 		if chainId == er.l1ChainID {
 			balance, err = er.L1BridgeContract.FundingPoolBalance(cOpts, er.EthAddress[chainId])
 		} else {
-			if chainId == 1442 {
+			if chainId == 1442 || chainId == 84532 || chainId == 421614 {
 				continue
 			}
 			balance, err = er.L2BridgeContract[chainId].FundingPoolBalance(cOpts, er.EthAddress[chainId])
 		}
 		if err != nil {
+			fmt.Println(chainId)
 			log.Error("get bridge funding pool balance fail", "err", err)
 			return err
 		}
