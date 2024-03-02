@@ -27,7 +27,6 @@ import (
 
 	"github.com/evm-layer2/selaginella/bindings"
 	common2 "github.com/evm-layer2/selaginella/common"
-	"github.com/evm-layer2/selaginella/common/retry"
 	"github.com/evm-layer2/selaginella/common/tasks"
 	"github.com/evm-layer2/selaginella/config"
 	"github.com/evm-layer2/selaginella/database"
@@ -976,21 +975,20 @@ func (er *Exporter) getSignOpts(chainId uint64) (*bind.TransactOpts, error) {
 func getTransactionReceipt(client node.EthClient, tx types.Transaction) (*types.Receipt, error) {
 	var receipt *types.Receipt
 	var err error
-	var ctx = context.Background()
 
-	retryStrategy := &retry.ExponentialStrategy{Min: 30_000_000_000, Max: 60_000_000_000, MaxJitter: 250}
-	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+	for {
+		time.Sleep(30 * time.Second)
 		receipt, err = client.TxReceiptDetailByHash(tx.Hash())
 		if err != nil && !errors.Is(err, ethereum.NotFound) {
 			log.Errorln("get transaction by hash fail", "error", err)
 			return nil, err
 		}
-		return nil, nil
-	}); err != nil {
-		return nil, err
-	}
 
-	return receipt, nil
+		if errors.Is(err, ethereum.NotFound) {
+			continue
+		}
+		return receipt, nil
+	}
 }
 
 func (er *Exporter) transferAssertToBridge(ethereumChainId uint64, l2ChainId uint64, transferAmount *big.Int, tokenAddress common.Address, ethereumClient node.EthClient) (*types.Receipt, error) {
