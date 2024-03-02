@@ -190,16 +190,16 @@ func (er *Exporter) Start(ctx context.Context) error {
 		</html>`))
 	})
 
-	//eFBTicker := time.NewTicker(2 * time.Hour)
-	//er.tasks.Go(func() error {
-	//	for range eFBTicker.C {
-	//		err := er.metricEthFundBalance()
-	//		if err != nil {
-	//			log.Error(err.Error())
-	//		}
-	//	}
-	//	return nil
-	//})
+	eFBTicker := time.NewTicker(2 * time.Hour)
+	er.tasks.Go(func() error {
+		for range eFBTicker.C {
+			err := er.metricEthFundBalance()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
 
 	//wFBTicker := time.NewTicker(2 * time.Hour)
 	//er.tasks.Go(func() error {
@@ -291,8 +291,8 @@ func (er *Exporter) metricEthFundBalance() error {
 	var ethereumChainId uint64
 	var opPoolBalance *big.Int
 	var opChainId uint64
-	var polygonZkEvmPoolBalance *big.Int
-	var polygonZkEvmChainId uint64
+	//var polygonZkEvmPoolBalance *big.Int
+	//var polygonZkEvmChainId uint64
 	var scrollPoolBalance *big.Int
 	var scrollChainId uint64
 	var chainCount uint64
@@ -328,10 +328,10 @@ func (er *Exporter) metricEthFundBalance() error {
 			opChainId = chainId
 			opPoolBalance = balance
 			chainCount++
-		case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
-			polygonZkEvmChainId = chainId
-			polygonZkEvmPoolBalance = balance
-			chainCount++
+		//case common2.ChainPolygonZkEvmID, common2.ChainPolygonZkEvmSepoliaID:
+		//	polygonZkEvmChainId = chainId
+		//	polygonZkEvmPoolBalance = balance
+		//	chainCount++
 		case common2.ChainScrollID, common2.ChainScrollSepoliaID:
 			scrollChainId = chainId
 			scrollPoolBalance = balance
@@ -341,7 +341,7 @@ func (er *Exporter) metricEthFundBalance() error {
 		}
 	}
 	ChainTotalBalance := new(big.Int).Add(ethereumPoolBalance, opPoolBalance)
-	ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
+	//ChainTotalBalance.Add(ChainTotalBalance, polygonZkEvmPoolBalance)
 	ChainTotalBalance.Add(ChainTotalBalance, scrollPoolBalance)
 	ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
 
@@ -349,10 +349,10 @@ func (er *Exporter) metricEthFundBalance() error {
 		log.Errorln("metric op eth balance fail", "error", err)
 		return err
 	}
-	if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.EthAddress[ethereumChainId], er.EthAddress[polygonZkEvmChainId]); err != nil {
-		log.Errorln("metric polygonZkEvm eth balance fail", "error", err)
-		return err
-	}
+	//if err := er.metricPolygonZkEvmBalance(&polygonZkEvmPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, polygonZkEvmChainId, ethereumChainId, er.EthAddress[ethereumChainId], er.EthAddress[polygonZkEvmChainId]); err != nil {
+	//	log.Errorln("metric polygonZkEvm eth balance fail", "error", err)
+	//	return err
+	//}
 	if err := er.metricScrollBalance(&scrollPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, scrollChainId, ethereumChainId, er.EthAddress[ethereumChainId], er.EthAddress[scrollChainId]); err != nil {
 		log.Errorln("metric scroll eth balance fail", "error", err)
 		return err
@@ -360,13 +360,13 @@ func (er *Exporter) metricEthFundBalance() error {
 
 	ethPBF, _ := ethereumPoolBalance.Float64()
 	opPBF, _ := opPoolBalance.Float64()
-	pyPBF, _ := polygonZkEvmPoolBalance.Float64()
+	//pyPBF, _ := polygonZkEvmPoolBalance.Float64()
 	scPBF, _ := scrollPoolBalance.Float64()
 	averageBalanceF, _ := ChainAverageBalance.Float64()
 
 	ethereumPoolBalanceMetric.WithLabelValues(er.poolAddresses[ethereumChainId].String(), er.EthAddress[ethereumChainId].String()).Set(ethPBF)
 	opPoolBalanceMetric.WithLabelValues(er.poolAddresses[opChainId].String(), er.EthAddress[opChainId].String()).Set(opPBF)
-	polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.EthAddress[polygonZkEvmChainId].String()).Set(pyPBF)
+	//polygonZkEvmPoolBalanceMetric.WithLabelValues(er.poolAddresses[polygonZkEvmChainId].String(), er.EthAddress[polygonZkEvmChainId].String()).Set(pyPBF)
 	scrollPoolBalanceMetric.WithLabelValues(er.poolAddresses[scrollChainId].String(), er.EthAddress[scrollChainId].String()).Set(scPBF)
 	chainAverageBalanceMetric.WithLabelValues("ETH").Set(averageBalanceF)
 
