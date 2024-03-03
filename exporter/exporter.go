@@ -360,7 +360,7 @@ func (er *Exporter) metricEthFundBalance() error {
 	//ChainTotalBalance.Add(ChainTotalBalance, basePoolBalance)
 	ChainTotalBalance.Add(ChainTotalBalance, arbPoolBalance)
 	ChainAverageBalance := new(big.Int).Div(ChainTotalBalance, new(big.Int).SetUint64(chainCount))
-	log.Infoln(fmt.Sprintf("l1 pool balance = %v, op pool balance = %v, scroll pool balance = %v, average balance = %v", ethereumPoolBalance.Uint64(), opPoolBalance.Uint64(), scrollPoolBalance.Uint64(), ChainAverageBalance.Uint64()))
+	log.Infoln(fmt.Sprintf("l1 pool balance = %v, op pool balance = %v, scroll pool balance = %v, arb pool balance = %v, average balance = %v", ethereumPoolBalance.Uint64(), opPoolBalance.Uint64(), scrollPoolBalance.Uint64(), arbPoolBalance.Uint64(), ChainAverageBalance.Uint64()))
 
 	if err := er.metricOpBalance(&opPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, opChainId, ethereumChainId, er.EthAddress[ethereumChainId], er.EthAddress[opChainId]); err != nil {
 		log.Errorln("metric op eth balance fail", "error", err)
