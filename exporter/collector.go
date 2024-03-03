@@ -29,6 +29,18 @@ var (
 			Help: "The balance of scroll pool"},
 		[]string{"PoolAddress", "tokenAddress"},
 	)
+	basePoolBalanceMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "selaginella_base_pool_balance",
+			Help: "The balance of base pool"},
+		[]string{"PoolAddress", "tokenAddress"},
+	)
+	arbPoolBalanceMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "selaginella_arb_pool_balance",
+			Help: "The balance of arb pool"},
+		[]string{"PoolAddress", "tokenAddress"},
+	)
 	chainAverageBalanceMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "selaginella_chain_average_balance",
@@ -42,4 +54,6 @@ func init() {
 	prometheus.MustRegister(opPoolBalanceMetric)
 	prometheus.MustRegister(polygonZkEvmPoolBalanceMetric)
 	prometheus.MustRegister(scrollPoolBalanceMetric)
+	prometheus.MustRegister(basePoolBalanceMetric)
+	prometheus.MustRegister(arbPoolBalanceMetric)
 }
