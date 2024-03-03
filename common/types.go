@@ -14,4 +14,8 @@ const (
 	ChainOpSepoliaID           = 11155420
 	ChainPolygonZkEvmID        = 1101
 	ChainPolygonZkEvmSepoliaID = 1442
+	ChainBaseID                = 8453
+	ChainBaseSepoliaID         = 84532
+	ChainArbID                 = 42161
+	ChainArbSepoliaID          = 421614
 )
