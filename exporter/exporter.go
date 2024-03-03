@@ -970,7 +970,7 @@ func (er *Exporter) metricScrollBalance(scrollPoolBalance **big.Int, ethereumPoo
 	scrollClient := er.ethClients[scrollChainId]
 
 	if (*scrollPoolBalance).Cmp(new(big.Int).Div(ChainAverageBalance, new(big.Int).SetUint64(er.L1Multiple))) < 1 {
-		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).Div(new(big.Int).SetUint64(TotalChainNum), new(big.Int).SetUint64(2)))
+		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).SetUint64(TotalChainNum))
 		log.Infoln("the amount need to transfer to scroll pool ", transferAmount.Uint64())
 
 		receipt, err := er.transferAssertToBridge(ethereumChainId, scrollChainId, transferAmount, l1TokenAddress, ethereumClient)
@@ -1018,7 +1018,7 @@ func (er *Exporter) metricBaseBalance(basePoolBalance **big.Int, ethereumPoolBal
 	baseClient := er.ethClients[baseChainId]
 
 	if (*basePoolBalance).Cmp(new(big.Int).Div(ChainAverageBalance, new(big.Int).SetUint64(er.L1Multiple))) < 1 {
-		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).Div(new(big.Int).SetUint64(TotalChainNum), new(big.Int).SetUint64(2)))
+		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).SetUint64(TotalChainNum))
 		log.Infoln("the amount need to transfer to base pool ", transferAmount.Uint64())
 
 		receipt, err := er.transferAssertToBridge(ethereumChainId, baseChainId, transferAmount, l1TokenAddress, ethereumClient)
@@ -1066,7 +1066,7 @@ func (er *Exporter) metricArbBalance(arbPoolBalance **big.Int, ethereumPoolBalan
 	arbClient := er.ethClients[arbChainId]
 
 	if (*arbPoolBalance).Cmp(new(big.Int).Div(ChainAverageBalance, new(big.Int).SetUint64(er.L1Multiple))) < 1 {
-		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).Div(new(big.Int).SetUint64(TotalChainNum), new(big.Int).SetUint64(2)))
+		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).SetUint64(TotalChainNum))
 		log.Infoln("the amount need to transfer to arb pool ", transferAmount.Uint64())
 
 		receipt, err := er.transferAssertToBridge(ethereumChainId, arbChainId, transferAmount, l1TokenAddress, ethereumClient)
