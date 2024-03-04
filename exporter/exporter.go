@@ -244,16 +244,16 @@ func (er *Exporter) Start(ctx context.Context) error {
 	//	return nil
 	//})
 
-	ePBTicker := time.NewTicker(1 * time.Minute)
-	er.tasks.Go(func() error {
-		for range ePBTicker.C {
-			err := er.metricEthereumPoolBalance()
-			if err != nil {
-				log.Error(err.Error())
-			}
-		}
-		return nil
-	})
+	//ePBTicker := time.NewTicker(1 * time.Minute)
+	//er.tasks.Go(func() error {
+	//	for range ePBTicker.C {
+	//		err := er.metricEthereumPoolBalance()
+	//		if err != nil {
+	//			log.Error(err.Error())
+	//		}
+	//	}
+	//	return nil
+	//})
 
 	log.Infoln("Listening on", er.exporterConfig.ExporterAddress)
 	if err := http.ListenAndServe(er.exporterConfig.ExporterAddress, nil); err != nil {
