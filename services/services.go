@@ -387,7 +387,7 @@ func (s *RpcServer) SendBridgeTransaction() error {
 				return err
 			}
 
-			log.Info(fmt.Sprintf("get send transaction request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v", bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce))
+			log.Info(fmt.Sprintf("get send transaction request: sourceChainId=%v, destChainId=%v, amount=%v, fee=%v, nonce=%v, tokenAddress=%v", bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce, bridgeTx.TokenAddress))
 
 			switch bridgeTx.TokenAddress.String() {
 			case s.EthAddress[chainId].String():
