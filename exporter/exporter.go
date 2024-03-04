@@ -189,16 +189,16 @@ func (er *Exporter) Start(ctx context.Context) error {
 		</html>`))
 	})
 
-	eFBTicker := time.NewTicker(15 * time.Minute)
-	er.tasks.Go(func() error {
-		for range eFBTicker.C {
-			err := er.metricEthFundBalance()
-			if err != nil {
-				log.Error(err.Error())
-			}
-		}
-		return nil
-	})
+	//eFBTicker := time.NewTicker(15 * time.Minute)
+	//er.tasks.Go(func() error {
+	//	for range eFBTicker.C {
+	//		err := er.metricEthFundBalance()
+	//		if err != nil {
+	//			log.Error(err.Error())
+	//		}
+	//	}
+	//	return nil
+	//})
 
 	//wFBTicker := time.NewTicker(2 * time.Hour)
 	//er.tasks.Go(func() error {
@@ -375,11 +375,11 @@ func (er *Exporter) metricEthFundBalance() error {
 		return err
 	}
 	//if err := er.metricBaseBalance(&basePoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, baseChainId, ethereumChainId, er.EthAddress[ethereumChainId], er.EthAddress[baseChainId]); err != nil {
-	//	log.Errorln("metric scroll eth balance fail", "error", err)
+	//	log.Errorln("metric base eth balance fail", "error", err)
 	//	return err
 	//}
 	if err := er.metricArbBalance(&arbPoolBalance, &ethereumPoolBalance, ChainAverageBalance, chainCount, arbChainId, ethereumChainId, er.EthAddress[ethereumChainId], er.EthAddress[arbChainId]); err != nil {
-		log.Errorln("metric scroll eth balance fail", "error", err)
+		log.Errorln("metric arb eth balance fail", "error", err)
 		return err
 	}
 
@@ -923,7 +923,7 @@ func (er *Exporter) metricPolygonZkEvmBalance(pyPoolBalance **big.Int, ethereumP
 	pyClient := er.ethClients[pyChainId]
 
 	if (*pyPoolBalance).Cmp(new(big.Int).Div(ChainAverageBalance, new(big.Int).SetUint64(er.L1Multiple))) < 1 {
-		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).Div(new(big.Int).SetUint64(TotalChainNum), new(big.Int).SetUint64(2)))
+		transferAmount = new(big.Int).Div(*ethereumPoolBalance, new(big.Int).SetUint64(TotalChainNum))
 		log.Infoln("the amount need to transfer to polygon zkEvm pool ", transferAmount.Uint64())
 
 		receipt, err := er.transferAssertToBridge(ethereumChainId, pyChainId, transferAmount, l2TokenAddress, ethereumClient)
@@ -936,7 +936,7 @@ func (er *Exporter) metricPolygonZkEvmBalance(pyPoolBalance **big.Int, ethereumP
 
 	}
 
-	if (*pyPoolBalance).Cmp(new(big.Int).Mul(ChainAverageBalance, new(big.Int).SetUint64(er.L2Multiple))) > -1 {
+	if (*pyPoolBalance).Cmp(new(big.Int).Mul(ChainAverageBalance, new(big.Int).Div(new(big.Int).SetUint64(er.L2Multiple), new(big.Int).SetUint64(2)))) > -1 {
 		withdrawAmount = new(big.Int).Div(*pyPoolBalance, new(big.Int).SetUint64(3))
 		log.Infoln("the amount polygon zkEvm pool need to transfer to l1 pool ", withdrawAmount.Uint64())
 
@@ -983,7 +983,7 @@ func (er *Exporter) metricScrollBalance(scrollPoolBalance **big.Int, ethereumPoo
 
 	}
 
-	if (*scrollPoolBalance).Cmp(new(big.Int).Mul(ChainAverageBalance, new(big.Int).SetUint64(er.L2Multiple))) > -1 {
+	if (*scrollPoolBalance).Cmp(new(big.Int).Mul(ChainAverageBalance, new(big.Int).Div(new(big.Int).SetUint64(er.L2Multiple), new(big.Int).SetUint64(2)))) > -1 {
 		withdrawAmount = new(big.Int).Div(*scrollPoolBalance, new(big.Int).SetUint64(3))
 		log.Infoln("the amount scroll pool need to transfer to l1 pool ", withdrawAmount.Uint64())
 
