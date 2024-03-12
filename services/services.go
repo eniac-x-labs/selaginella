@@ -943,21 +943,21 @@ func (s *RpcServer) CompletePoolAndNew() error {
 func getTransactionReceipt(client node.EthClient, tx types.Transaction) (*types.Receipt, error) {
 	var receipt *types.Receipt
 	var err error
-	var ctx = context.Background()
 
-	retryStrategy := &retry.ExponentialStrategy{Min: 30_000_000_000, Max: 60_000_000_000, MaxJitter: 250}
-	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+	ticker := time.NewTicker(30 * time.Second)
+	for {
+		<-ticker.C
 		receipt, err = client.TxReceiptDetailByHash(tx.Hash())
 		if err != nil && !errors.Is(err, ethereum.NotFound) {
 			log.Error("get transaction by hash fail", "error", err)
 			return nil, err
 		}
-		return nil, nil
-	}); err != nil {
-		return nil, err
-	}
 
-	return receipt, nil
+		if errors.Is(err, ethereum.NotFound) {
+			continue
+		}
+		return receipt, nil
+	}
 }
 
 func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindings.IL1PoolManagerPool, usdtPool bindings.IL1PoolManagerPool, usdcPool bindings.IL1PoolManagerPool, daiPool bindings.IL1PoolManagerPool) ([]bindings.IL1PoolManagerPool, error) {
