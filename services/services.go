@@ -943,21 +943,21 @@ func (s *RpcServer) CompletePoolAndNew() error {
 func getTransactionReceipt(client node.EthClient, tx types.Transaction) (*types.Receipt, error) {
 	var receipt *types.Receipt
 	var err error
-	var ctx = context.Background()
 
-	retryStrategy := &retry.ExponentialStrategy{Min: 30_000_000_000, Max: 60_000_000_000, MaxJitter: 250}
-	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+	ticker := time.NewTicker(30 * time.Second)
+	for {
+		<-ticker.C
 		receipt, err = client.TxReceiptDetailByHash(tx.Hash())
 		if err != nil && !errors.Is(err, ethereum.NotFound) {
 			log.Error("get transaction by hash fail", "error", err)
 			return nil, err
 		}
-		return nil, nil
-	}); err != nil {
-		return nil, err
-	}
 
-	return receipt, nil
+		if errors.Is(err, ethereum.NotFound) {
+			continue
+		}
+		return receipt, nil
+	}
 }
 
 func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindings.IL1PoolManagerPool, usdtPool bindings.IL1PoolManagerPool, usdcPool bindings.IL1PoolManagerPool, daiPool bindings.IL1PoolManagerPool) ([]bindings.IL1PoolManagerPool, error) {
@@ -969,7 +969,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 	newPool.TotalFeeClaimed = new(big.Int).SetUint64(0)
 	newPool.TotalAmount = new(big.Int).SetUint64(0)
 
-	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.EthAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.EthAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -977,7 +977,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if wethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if wethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.WEthAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.WEthAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -985,7 +985,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.USDTAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDTAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -993,7 +993,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if usdcPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if usdcPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.USDCAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDCAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -1001,7 +1001,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if daiPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if daiPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.DAIAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.DAIAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
