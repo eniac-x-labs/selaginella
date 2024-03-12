@@ -969,6 +969,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 
 	newPool.TotalFeeClaimed = new(big.Int).SetUint64(0)
 	newPool.TotalAmount = new(big.Int).SetUint64(0)
+	newPool.TotalFee = new(big.Int).SetUint64(0)
 
 	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.EthAddress[s.l1ChainID]
