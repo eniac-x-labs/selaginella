@@ -32,7 +32,7 @@ CREATE INDEX IF NOT EXISTS cross_chain_transfer_source_sender_address ON cross_c
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_dest_receive_address ON cross_chain_transfer(dest_receive_address);
 CREATE INDEX IF NOT EXISTS cross_chain_transfer_token_address ON cross_chain_transfer(token_address);
 
-CREATE TABLE IF NOT EXISTS update_funding_pool_balance (
+CREATE TABLE IF NOT EXISTS update_deposit_funding_pool_balance (
     guid                  VARCHAR PRIMARY KEY,
     source_chain_id       UINT256 NOT NULL,
     dest_chain_id         UINT256 NOT NULL,
@@ -44,8 +44,26 @@ CREATE TABLE IF NOT EXISTS update_funding_pool_balance (
     status                SMALLINT DEFAULT 0,
     timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
 );
-CREATE INDEX IF NOT EXISTS update_funding_pool_balance_timestamp ON update_funding_pool_balance(timestamp);
-CREATE INDEX IF NOT EXISTS update_funding_pool_balance_source_hash ON update_funding_pool_balance(source_hash);
-CREATE INDEX IF NOT EXISTS update_funding_pool_balance_tx_hash ON update_funding_pool_balance(tx_hash);
-CREATE INDEX IF NOT EXISTS update_funding_pool_balance_dest_receive_address ON update_funding_pool_balance(receive_address);
-CREATE INDEX IF NOT EXISTS update_funding_pool_balance_token_address ON update_funding_pool_balance(token_address);
+CREATE INDEX IF NOT EXISTS update_deposit_funding_pool_balance_timestamp ON update_deposit_funding_pool_balance(timestamp);
+CREATE INDEX IF NOT EXISTS update_deposit_funding_pool_balance_source_hash ON update_deposit_funding_pool_balance(source_hash);
+CREATE INDEX IF NOT EXISTS update_deposit_funding_pool_balance_tx_hash ON update_deposit_funding_pool_balance(tx_hash);
+CREATE INDEX IF NOT EXISTS update_deposit_funding_pool_balance_dest_receive_address ON update_deposit_funding_pool_balance(receive_address);
+CREATE INDEX IF NOT EXISTS update_deposit_funding_pool_balance_token_address ON update_deposit_funding_pool_balance(token_address);
+
+CREATE TABLE IF NOT EXISTS update_withdraw_funding_pool_balance (
+    guid                  VARCHAR PRIMARY KEY,
+    source_chain_id       UINT256 NOT NULL,
+    dest_chain_id         UINT256 NOT NULL,
+    receive_address       VARCHAR NOT NULL,
+    token_address         VARCHAR NOT NULL,
+    amount                UINT256 NOT NULL,
+    source_hash           VARCHAR NOT NULL,
+    tx_hash               VARCHAR NOT NULL,
+    status                SMALLINT DEFAULT 0,
+    timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
+);
+CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_timestamp ON update_withdraw_funding_pool_balance(timestamp);
+CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_source_hash ON update_withdraw_funding_pool_balance(source_hash);
+CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_tx_hash ON update_withdraw_funding_pool_balance(tx_hash);
+CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_dest_receive_address ON update_withdraw_funding_pool_balance(receive_address);
+CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_token_address ON update_withdraw_funding_pool_balance(token_address);

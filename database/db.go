@@ -16,9 +16,10 @@ import (
 )
 
 type DB struct {
-	gorm                     *gorm.DB
-	CrossChainTransfer       CrossChainTransferDB
-	UpdateFundingPoolBalance UpdateFundingPoolBalanceDB
+	gorm                             *gorm.DB
+	CrossChainTransfer               CrossChainTransferDB
+	UpdateDepositFundingPoolBalance  UpdateDepositFundingPoolBalanceDB
+	UpdateWithdrawFundingPoolBalance UpdateWithdrawFundingPoolBalanceDB
 }
 
 func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
@@ -48,9 +49,10 @@ func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
 		return nil, err
 	}
 	db := &DB{
-		gorm:                     gorm,
-		CrossChainTransfer:       NewCrossChainTransferDB(gorm),
-		UpdateFundingPoolBalance: NewUpdateFundingPoolBalanceDB(gorm),
+		gorm:                             gorm,
+		CrossChainTransfer:               NewCrossChainTransferDB(gorm),
+		UpdateDepositFundingPoolBalance:  NewDepositUpdateFundingPoolBalanceDB(gorm),
+		UpdateWithdrawFundingPoolBalance: NewWithdrawUpdateFundingPoolBalanceDB(gorm),
 	}
 	return db, nil
 }
@@ -58,9 +60,10 @@ func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
 func (db *DB) Transaction(fn func(db *DB) error) error {
 	return db.gorm.Transaction(func(tx *gorm.DB) error {
 		txDB := &DB{
-			gorm:                     tx,
-			CrossChainTransfer:       NewCrossChainTransferDB(tx),
-			UpdateFundingPoolBalance: NewUpdateFundingPoolBalanceDB(tx),
+			gorm:                             tx,
+			CrossChainTransfer:               NewCrossChainTransferDB(tx),
+			UpdateDepositFundingPoolBalance:  NewDepositUpdateFundingPoolBalanceDB(tx),
+			UpdateWithdrawFundingPoolBalance: NewWithdrawUpdateFundingPoolBalanceDB(tx),
 		}
 		return fn(txDB)
 	})

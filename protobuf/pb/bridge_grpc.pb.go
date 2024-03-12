@@ -24,7 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type BridgeServiceClient interface {
 	CrossChainTransfer(ctx context.Context, in *CrossChainTransferRequest, opts ...grpc.CallOption) (*CrossChainTransferResponse, error)
 	ChangeTransferStatus(ctx context.Context, in *CrossChainTransferStatusRequest, opts ...grpc.CallOption) (*CrossChainTransferStatusResponse, error)
-	UpdateFundingPoolBalance(ctx context.Context, in *UpdateFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateFundingPoolBalanceResponse, error)
+	UpdateDepositFundingPoolBalance(ctx context.Context, in *UpdateDepositFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateDepositFundingPoolBalanceResponse, error)
+	UpdateWithdrawFundingPoolBalance(ctx context.Context, in *UpdateWithdrawFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateWithdrawFundingPoolBalanceResponse, error)
 }
 
 type bridgeServiceClient struct {
@@ -53,9 +54,18 @@ func (c *bridgeServiceClient) ChangeTransferStatus(ctx context.Context, in *Cros
 	return out, nil
 }
 
-func (c *bridgeServiceClient) UpdateFundingPoolBalance(ctx context.Context, in *UpdateFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateFundingPoolBalanceResponse, error) {
-	out := new(UpdateFundingPoolBalanceResponse)
-	err := c.cc.Invoke(ctx, "/selaginella.proto_rpc.BridgeService/UpdateFundingPoolBalance", in, out, opts...)
+func (c *bridgeServiceClient) UpdateDepositFundingPoolBalance(ctx context.Context, in *UpdateDepositFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateDepositFundingPoolBalanceResponse, error) {
+	out := new(UpdateDepositFundingPoolBalanceResponse)
+	err := c.cc.Invoke(ctx, "/selaginella.proto_rpc.BridgeService/UpdateDepositFundingPoolBalance", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bridgeServiceClient) UpdateWithdrawFundingPoolBalance(ctx context.Context, in *UpdateWithdrawFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateWithdrawFundingPoolBalanceResponse, error) {
+	out := new(UpdateWithdrawFundingPoolBalanceResponse)
+	err := c.cc.Invoke(ctx, "/selaginella.proto_rpc.BridgeService/UpdateWithdrawFundingPoolBalance", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +78,9 @@ func (c *bridgeServiceClient) UpdateFundingPoolBalance(ctx context.Context, in *
 type BridgeServiceServer interface {
 	CrossChainTransfer(context.Context, *CrossChainTransferRequest) (*CrossChainTransferResponse, error)
 	ChangeTransferStatus(context.Context, *CrossChainTransferStatusRequest) (*CrossChainTransferStatusResponse, error)
-	UpdateFundingPoolBalance(context.Context, *UpdateFundingPoolBalanceRequest) (*UpdateFundingPoolBalanceResponse, error)
+	UpdateDepositFundingPoolBalance(context.Context, *UpdateDepositFundingPoolBalanceRequest) (*UpdateDepositFundingPoolBalanceResponse, error)
+	UpdateWithdrawFundingPoolBalance(context.Context, *UpdateWithdrawFundingPoolBalanceRequest) (*UpdateWithdrawFundingPoolBalanceResponse, error)
+	mustEmbedUnimplementedBridgeServiceServer()
 }
 
 // UnimplementedBridgeServiceServer must be embedded to have forward compatible implementations.
@@ -81,15 +93,17 @@ func (UnimplementedBridgeServiceServer) CrossChainTransfer(context.Context, *Cro
 func (UnimplementedBridgeServiceServer) ChangeTransferStatus(context.Context, *CrossChainTransferStatusRequest) (*CrossChainTransferStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangeTransferStatus not implemented")
 }
-func (UnimplementedBridgeServiceServer) UpdateFundingPoolBalance(context.Context, *UpdateFundingPoolBalanceRequest) (*UpdateFundingPoolBalanceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateFundingPoolBalance not implemented")
+func (UnimplementedBridgeServiceServer) UpdateDepositFundingPoolBalance(context.Context, *UpdateDepositFundingPoolBalanceRequest) (*UpdateDepositFundingPoolBalanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDepositFundingPoolBalance not implemented")
+}
+func (UnimplementedBridgeServiceServer) UpdateWithdrawFundingPoolBalance(context.Context, *UpdateWithdrawFundingPoolBalanceRequest) (*UpdateWithdrawFundingPoolBalanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWithdrawFundingPoolBalance not implemented")
 }
 
 // UnsafeBridgeServiceServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to BridgeServiceServer will
 // result in compilation errors.
 type UnsafeBridgeServiceServer interface {
-	mustEmbedUnimplementedBridgeServiceServer()
 }
 
 func RegisterBridgeServiceServer(s grpc.ServiceRegistrar, srv BridgeServiceServer) {
@@ -132,20 +146,38 @@ func _BridgeService_ChangeTransferStatus_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BridgeService_UpdateFundingPoolBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateFundingPoolBalanceRequest)
+func _BridgeService_UpdateDepositFundingPoolBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDepositFundingPoolBalanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BridgeServiceServer).UpdateFundingPoolBalance(ctx, in)
+		return srv.(BridgeServiceServer).UpdateDepositFundingPoolBalance(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/selaginella.proto_rpc.BridgeService/UpdateFundingPoolBalance",
+		FullMethod: "/selaginella.proto_rpc.BridgeService/UpdateDepositFundingPoolBalance",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BridgeServiceServer).UpdateFundingPoolBalance(ctx, req.(*UpdateFundingPoolBalanceRequest))
+		return srv.(BridgeServiceServer).UpdateDepositFundingPoolBalance(ctx, req.(*UpdateDepositFundingPoolBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BridgeService_UpdateWithdrawFundingPoolBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWithdrawFundingPoolBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeServiceServer).UpdateWithdrawFundingPoolBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/selaginella.proto_rpc.BridgeService/UpdateWithdrawFundingPoolBalance",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeServiceServer).UpdateWithdrawFundingPoolBalance(ctx, req.(*UpdateWithdrawFundingPoolBalanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -166,8 +198,12 @@ var BridgeService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BridgeService_ChangeTransferStatus_Handler,
 		},
 		{
-			MethodName: "UpdateFundingPoolBalance",
-			Handler:    _BridgeService_UpdateFundingPoolBalance_Handler,
+			MethodName: "UpdateDepositFundingPoolBalance",
+			Handler:    _BridgeService_UpdateDepositFundingPoolBalance_Handler,
+		},
+		{
+			MethodName: "UpdateWithdrawFundingPoolBalance",
+			Handler:    _BridgeService_UpdateWithdrawFundingPoolBalance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
