@@ -216,10 +216,21 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
-	CUBTicker := time.NewTicker(10 * time.Second)
+	CDUBTicker := time.NewTicker(10 * time.Second)
 	s.tasks.Go(func() error {
-		for range CUBTicker.C {
-			err := s.ChangeUpdateBalanceTransactionStatus()
+		for range CDUBTicker.C {
+			err := s.ChangeDepositUpdateBalanceTransactionStatus()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
+	CWUBTicker := time.NewTicker(10 * time.Second)
+	s.tasks.Go(func() error {
+		for range CWUBTicker.C {
+			err := s.ChangeWithdrawUpdateBalanceTransactionStatus()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -238,10 +249,10 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
-	SUBTicker := time.NewTicker(3 * time.Second)
+	SDUBTicker := time.NewTicker(3 * time.Second)
 	s.tasks.Go(func() error {
-		for range SUBTicker.C {
-			err := s.SendUpdateBalanceTransaction()
+		for range SDUBTicker.C {
+			err := s.SendDepositUpdateBalanceTransaction()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -249,7 +260,18 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
-	CPTicker := time.NewTicker(1 * time.Hour)
+	SWUBTicker := time.NewTicker(3 * time.Second)
+	s.tasks.Go(func() error {
+		for range SWUBTicker.C {
+			err := s.SendWithdrawUpdateBalanceTransaction()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
+	CPTicker := time.NewTicker(1 * time.Minute)
 	s.tasks.Go(func() error {
 		for range CPTicker.C {
 			err := s.CompletePoolAndNew()
@@ -323,29 +345,29 @@ func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainT
 	}, nil
 }
 
-func (s *RpcServer) UpdateFundingPoolBalance(ctx context.Context, in *pb.UpdateFundingPoolBalanceRequest) (*pb.UpdateFundingPoolBalanceResponse, error) {
+func (s *RpcServer) UpdateWithdrawFundingPoolBalance(ctx context.Context, in *pb.UpdateWithdrawFundingPoolBalanceRequest) (*pb.UpdateWithdrawFundingPoolBalanceResponse, error) {
 	if in == nil {
 		log.Warn("invalid request: request body is empty")
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
-	var updateFundingPoolBalances []database.UpdateFundingPoolBalance
+	var updateFundingPoolBalances []database.UpdateWithdrawFundingPoolBalance
 
-	uFPB, _ := s.db.UpdateFundingPoolBalance.UpdateFundingPoolBalanceBySourceHash(in.SourceHash)
+	uFPB, _ := s.db.UpdateWithdrawFundingPoolBalance.UpdateFundingPoolBalanceBySourceHash(in.SourceHash)
 	if uFPB != nil {
 		log.Error("cannot be called repeatedly!")
 		return nil, errors.New("cannot be called repeatedly")
 	}
 
 	sourceHash := common.HexToHash(in.SourceHash)
-	updateFundingPoolBalance := s.db.UpdateFundingPoolBalance.BuildUpdateFundingPoolBalance(in, sourceHash)
+	updateFundingPoolBalance := s.db.UpdateWithdrawFundingPoolBalance.BuildUpdateFundingPoolBalance(in, sourceHash)
 	updateFundingPoolBalances = append(updateFundingPoolBalances, updateFundingPoolBalance)
 
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
 		if err := s.db.Transaction(func(tx *database.DB) error {
 			if len(updateFundingPoolBalances) > 0 {
-				if err := s.db.UpdateFundingPoolBalance.StoreBatchUpdateFundingPoolBalance(updateFundingPoolBalances); err != nil {
+				if err := s.db.UpdateWithdrawFundingPoolBalance.StoreBatchUpdateFundingPoolBalance(updateFundingPoolBalances); err != nil {
 					return err
 				}
 			}
@@ -359,9 +381,51 @@ func (s *RpcServer) UpdateFundingPoolBalance(ctx context.Context, in *pb.UpdateF
 		return nil, err
 	}
 
-	return &pb.UpdateFundingPoolBalanceResponse{
+	return &pb.UpdateWithdrawFundingPoolBalanceResponse{
 		Success: true,
-		Message: "call cross chain transfer success",
+		Message: "call update withdraw funding pool balance success",
+	}, nil
+}
+
+func (s *RpcServer) UpdateDepositFundingPoolBalance(ctx context.Context, in *pb.UpdateDepositFundingPoolBalanceRequest) (*pb.UpdateDepositFundingPoolBalanceResponse, error) {
+	if in == nil {
+		log.Warn("invalid request: request body is empty")
+		return nil, errors.New("invalid request: request body is empty")
+	}
+
+	var updateFundingPoolBalances []database.UpdateDepositFundingPoolBalance
+
+	uFPB, _ := s.db.UpdateDepositFundingPoolBalance.UpdateFundingPoolBalanceBySourceHash(in.SourceHash)
+	if uFPB != nil {
+		log.Error("cannot be called repeatedly!")
+		return nil, errors.New("cannot be called repeatedly")
+	}
+
+	sourceHash := common.HexToHash(in.SourceHash)
+	updateFundingPoolBalance := s.db.UpdateDepositFundingPoolBalance.BuildUpdateFundingPoolBalance(in, sourceHash)
+	updateFundingPoolBalances = append(updateFundingPoolBalances, updateFundingPoolBalance)
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if len(updateFundingPoolBalances) > 0 {
+				if err := s.db.UpdateDepositFundingPoolBalance.StoreBatchUpdateFundingPoolBalance(updateFundingPoolBalances); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return &pb.UpdateDepositFundingPoolBalanceResponse{
+		Success: true,
+		Message: "call update deposit funding pool balance success",
 	}, nil
 }
 
@@ -483,7 +547,7 @@ func (s *RpcServer) SendBridgeTransaction() error {
 	return nil
 }
 
-func (s *RpcServer) SendUpdateBalanceTransaction() error {
+func (s *RpcServer) SendDepositUpdateBalanceTransaction() error {
 
 	var cOpts *bind.CallOpts
 	var tOpts *bind.TransactOpts
@@ -491,11 +555,11 @@ func (s *RpcServer) SendUpdateBalanceTransaction() error {
 	var tx *types.Transaction
 	var finalTx *types.Transaction
 	var ctx = context.Background()
-	var nilUpdateFundingPoolBalance database.UpdateFundingPoolBalance
+	var nilUpdateFundingPoolBalance database.UpdateDepositFundingPoolBalance
 
-	updateTx, _ := s.db.UpdateFundingPoolBalance.OldestPendingNoSentTransaction()
+	updateTx, _ := s.db.UpdateDepositFundingPoolBalance.OldestPendingNoSentTransaction()
 	if *updateTx == nilUpdateFundingPoolBalance {
-		log.Warn("no more update balance transaction need to be sent")
+		log.Warn("no more update deposit balance transaction need to be sent")
 		return nil
 	}
 
@@ -525,14 +589,16 @@ func (s *RpcServer) SendUpdateBalanceTransaction() error {
 	tx, err = s.L2BridgeContract[updateTx.DestChainId.Uint64()].UpdateFundingPoolBalance(tOpts, updateTx.TokenAddress, new(big.Int).Add(balance, updateTx.Amount))
 	finalTx, err = s.RawL2BridgeContract[updateTx.DestChainId.Uint64()].RawTransact(tOpts, tx.Data())
 	if err != nil {
-		log.Error("raw send update funding pool balance transaction fail", "error", err)
+		log.Error("raw send update deposit funding pool balance transaction fail", "error", err)
 		return err
 	}
 	err = s.ethClients[updateTx.DestChainId.Uint64()].SendTransaction(ctx, finalTx)
 	if err != nil {
-		log.Error("send update funding pool balance transaction fail", "error", err)
+		log.Error("send update deposit funding pool balance transaction fail", "error", err)
 		return err
 	}
+
+	log.Info("send update deposit funding pool balance transaction success", "tx_hash", finalTx.Hash())
 
 	updateTx.TxHash = finalTx.Hash()
 
@@ -540,7 +606,83 @@ func (s *RpcServer) SendUpdateBalanceTransaction() error {
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
 		if err := s.db.Transaction(func(tx *database.DB) error {
 			if updateTx != nil {
-				if err := s.db.UpdateFundingPoolBalance.UpdateFundingPoolBalanceTransactionHash(*updateTx); err != nil {
+				if err := s.db.UpdateDepositFundingPoolBalance.UpdateFundingPoolBalanceTransactionHash(*updateTx); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *RpcServer) SendWithdrawUpdateBalanceTransaction() error {
+
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var err error
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var ctx = context.Background()
+	var nilUpdateFundingPoolBalance database.UpdateWithdrawFundingPoolBalance
+
+	updateTx, _ := s.db.UpdateWithdrawFundingPoolBalance.OldestPendingNoSentTransaction()
+	if *updateTx == nilUpdateFundingPoolBalance {
+		log.Warn("no more update withdraw balance transaction need to be sent")
+		return nil
+	}
+
+	latestBlock, err := s.ethClients[updateTx.DestChainId.Uint64()].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	balance, err := s.L1BridgeContract.FundingPoolBalance(cOpts, updateTx.TokenAddress)
+	if err != nil {
+		log.Error("get l1 bridge funding pool balance fail", "err", err)
+		return err
+	}
+
+	tOpts, err = s.newTransactOpts(ctx, updateTx.DestChainId.Uint64())
+	if err != nil {
+		log.Error("get transactOpts fail", "err", err)
+		return err
+	}
+
+	tx, err = s.L2BridgeContract[updateTx.DestChainId.Uint64()].UpdateFundingPoolBalance(tOpts, updateTx.TokenAddress, new(big.Int).Add(balance, updateTx.Amount))
+	finalTx, err = s.RawL1BridgeContract.RawTransact(tOpts, tx.Data())
+	if err != nil {
+		log.Error("raw send update withdraw funding pool balance transaction fail", "error", err)
+		return err
+	}
+	err = s.ethClients[updateTx.DestChainId.Uint64()].SendTransaction(ctx, finalTx)
+	if err != nil {
+		log.Error("send update withdraw funding pool balance transaction fail", "error", err)
+		return err
+	}
+
+	log.Info("send update withdraw funding pool balance transaction success", "tx_hash", finalTx.Hash())
+
+	updateTx.TxHash = finalTx.Hash()
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if updateTx != nil {
+				if err := s.db.UpdateWithdrawFundingPoolBalance.UpdateFundingPoolBalanceTransactionHash(*updateTx); err != nil {
 					return err
 				}
 			}
@@ -588,10 +730,10 @@ func (s *RpcServer) ChangeBridgeTransactionStatus() error {
 	return nil
 }
 
-func (s *RpcServer) ChangeUpdateBalanceTransactionStatus() error {
+func (s *RpcServer) ChangeDepositUpdateBalanceTransactionStatus() error {
 	var receipt *types.Receipt
 
-	tx, err := s.db.UpdateFundingPoolBalance.OldestPendingSentTransaction()
+	tx, err := s.db.UpdateDepositFundingPoolBalance.OldestPendingSentTransaction()
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Error("get oldest pending transaction fail", "err", err)
 		return err
@@ -608,13 +750,44 @@ func (s *RpcServer) ChangeUpdateBalanceTransactionStatus() error {
 		return nil
 	}
 
-	err = s.db.UpdateFundingPoolBalance.ChangeUpdateFundingPoolBalanceSentStatueByTxHash(receipt.TxHash.String())
+	err = s.db.UpdateDepositFundingPoolBalance.ChangeUpdateFundingPoolBalanceSentStatueByTxHash(receipt.TxHash.String())
 	if err != nil {
-		log.Error("change transaction status fail", "err", err)
+		log.Error("change deposit update pool balance transaction status fail", "err", err)
 		return err
 	}
 
-	log.Info("change update balance transaction status success", "txHash", receipt.TxHash)
+	log.Info("change update deposit pool balance transaction status success", "txHash", receipt.TxHash)
+
+	return nil
+}
+
+func (s *RpcServer) ChangeWithdrawUpdateBalanceTransactionStatus() error {
+	var receipt *types.Receipt
+
+	tx, err := s.db.UpdateWithdrawFundingPoolBalance.OldestPendingSentTransaction()
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error("get oldest pending transaction fail", "err", err)
+		return err
+	}
+
+	if tx.DestChainId != nil {
+		receipt, err = s.ethClients[tx.DestChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
+		if errors.Is(err, ethereum.NotFound) {
+			log.Warn("transaction not found")
+			return nil
+		}
+	} else {
+		log.Info("no more pending transaction !")
+		return nil
+	}
+
+	err = s.db.UpdateWithdrawFundingPoolBalance.ChangeUpdateFundingPoolBalanceSentStatueByTxHash(receipt.TxHash.String())
+	if err != nil {
+		log.Error("change withdraw update pool balance transaction status fail", "err", err)
+		return err
+	}
+
+	log.Info("change update withdraw pool balance transaction status success", "txHash", receipt.TxHash)
 
 	return nil
 }
@@ -692,11 +865,27 @@ func (s *RpcServer) CompletePoolAndNew() error {
 		return err
 	}
 
-	l1EthPool, err := s.L1BridgeContract.GetPool(cOpts, s.EthAddress[s.l1ChainID], new(big.Int).Sub(ethPoolLength, new(big.Int).SetUint64(1)))
-	l1WthPool, err := s.L1BridgeContract.GetPool(cOpts, s.WEthAddress[s.l1ChainID], new(big.Int).Sub(wethPoolLength, new(big.Int).SetUint64(1)))
-	l1UsdtPool, err := s.L1BridgeContract.GetPool(cOpts, s.USDTAddress[s.l1ChainID], new(big.Int).Sub(usdtPoolLength, new(big.Int).SetUint64(1)))
-	l1UsdcPool, err := s.L1BridgeContract.GetPool(cOpts, s.USDCAddress[s.l1ChainID], new(big.Int).Sub(usdcPoolLength, new(big.Int).SetUint64(1)))
-	l1DaiPool, err := s.L1BridgeContract.GetPool(cOpts, s.DAIAddress[s.l1ChainID], new(big.Int).Sub(daiPoolLength, new(big.Int).SetUint64(1)))
+	var l1EthPool bindings.IL1PoolManagerPool
+	var l1WthPool bindings.IL1PoolManagerPool
+	var l1UsdtPool bindings.IL1PoolManagerPool
+	var l1UsdcPool bindings.IL1PoolManagerPool
+	var l1DaiPool bindings.IL1PoolManagerPool
+
+	if ethPoolLength.Uint64() > 1 {
+		l1EthPool, err = s.L1BridgeContract.GetPool(cOpts, s.EthAddress[s.l1ChainID], new(big.Int).Sub(ethPoolLength, new(big.Int).SetUint64(2)))
+	}
+	if wethPoolLength.Uint64() > 1 {
+		l1WthPool, err = s.L1BridgeContract.GetPool(cOpts, s.WEthAddress[s.l1ChainID], new(big.Int).Sub(wethPoolLength, new(big.Int).SetUint64(2)))
+	}
+	if usdtPoolLength.Uint64() > 1 {
+		l1UsdtPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDTAddress[s.l1ChainID], new(big.Int).Sub(usdtPoolLength, new(big.Int).SetUint64(2)))
+	}
+	if usdcPoolLength.Uint64() > 1 {
+		l1UsdcPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDCAddress[s.l1ChainID], new(big.Int).Sub(usdcPoolLength, new(big.Int).SetUint64(2)))
+	}
+	if daiPoolLength.Uint64() > 1 {
+		l1DaiPool, err = s.L1BridgeContract.GetPool(cOpts, s.DAIAddress[s.l1ChainID], new(big.Int).Sub(daiPoolLength, new(big.Int).SetUint64(2)))
+	}
 	if err != nil {
 		log.Error("get pool fail", "err", err)
 		return err
@@ -767,6 +956,9 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 	var totalFee *big.Int
 	var err error
 
+	newPool.TotalFeeClaimed = new(big.Int).SetUint64(0)
+	newPool.TotalAmount = new(big.Int).SetUint64(0)
+
 	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
 		newPool.Token = s.EthAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.EthAddress[s.l1ChainID])
@@ -799,7 +991,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if daiPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
 		newPool.Token = s.DAIAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.DAIAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))

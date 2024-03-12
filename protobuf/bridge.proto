@@ -6,7 +6,8 @@ package selaginella.proto_rpc;
 service BridgeService {
   rpc crossChainTransfer(CrossChainTransferRequest) returns (CrossChainTransferResponse);
   rpc changeTransferStatus(CrossChainTransferStatusRequest) returns (CrossChainTransferStatusResponse);
-  rpc UpdateFundingPoolBalance(UpdateFundingPoolBalanceRequest) returns (UpdateFundingPoolBalanceResponse);
+  rpc UpdateDepositFundingPoolBalance(UpdateDepositFundingPoolBalanceRequest) returns (UpdateDepositFundingPoolBalanceResponse);
+  rpc UpdateWithdrawFundingPoolBalance(UpdateWithdrawFundingPoolBalanceRequest) returns (UpdateWithdrawFundingPoolBalanceResponse);
 }
 
 message CrossChainTransferRequest {
@@ -36,7 +37,7 @@ message CrossChainTransferStatusResponse {
   string message = 2;
 }
 
-message UpdateFundingPoolBalanceRequest {
+message UpdateDepositFundingPoolBalanceRequest {
   string source_chain_id = 1;
   string dest_chain_id = 2;
   string receive_address = 3;
@@ -45,7 +46,21 @@ message UpdateFundingPoolBalanceRequest {
   string source_hash = 6;
 }
 
-message UpdateFundingPoolBalanceResponse {
+message UpdateDepositFundingPoolBalanceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message UpdateWithdrawFundingPoolBalanceRequest {
+  string source_chain_id = 1;
+  string dest_chain_id = 2;
+  string receive_address = 3;
+  string amount = 4;
+  string token_address = 5;
+  string source_hash = 6;
+}
+
+message UpdateWithdrawFundingPoolBalanceResponse {
   bool success = 1;
   string message = 2;
 }
