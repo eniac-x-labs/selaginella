@@ -873,18 +873,28 @@ func (s *RpcServer) CompletePoolAndNew() error {
 
 	if ethPoolLength.Uint64() > 1 {
 		l1EthPool, err = s.L1BridgeContract.GetPool(cOpts, s.EthAddress[s.l1ChainID], new(big.Int).Sub(ethPoolLength, new(big.Int).SetUint64(2)))
+	} else {
+		l1EthPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
 	if wethPoolLength.Uint64() > 1 {
 		l1WthPool, err = s.L1BridgeContract.GetPool(cOpts, s.WEthAddress[s.l1ChainID], new(big.Int).Sub(wethPoolLength, new(big.Int).SetUint64(2)))
+	} else {
+		l1WthPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
 	if usdtPoolLength.Uint64() > 1 {
 		l1UsdtPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDTAddress[s.l1ChainID], new(big.Int).Sub(usdtPoolLength, new(big.Int).SetUint64(2)))
+	} else {
+		l1UsdtPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
 	if usdcPoolLength.Uint64() > 1 {
 		l1UsdcPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDCAddress[s.l1ChainID], new(big.Int).Sub(usdcPoolLength, new(big.Int).SetUint64(2)))
+	} else {
+		l1UsdcPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
 	if daiPoolLength.Uint64() > 1 {
 		l1DaiPool, err = s.L1BridgeContract.GetPool(cOpts, s.DAIAddress[s.l1ChainID], new(big.Int).Sub(daiPoolLength, new(big.Int).SetUint64(2)))
+	} else {
+		l1DaiPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
 	if err != nil {
 		log.Error("get pool fail", "err", err)
