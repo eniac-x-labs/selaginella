@@ -969,7 +969,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 	newPool.TotalFeeClaimed = new(big.Int).SetUint64(0)
 	newPool.TotalAmount = new(big.Int).SetUint64(0)
 
-	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.EthAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.EthAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -977,7 +977,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if wethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if wethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.WEthAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.WEthAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -985,7 +985,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.USDTAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDTAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -993,7 +993,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if usdcPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if usdcPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.USDCAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDCAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
@@ -1001,7 +1001,7 @@ func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindi
 		newPool.TotalFee = newFee
 		newPools = append(newPools, newPool)
 	}
-	if daiPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+	if daiPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
 		newPool.Token = s.DAIAddress[s.l1ChainID]
 		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.DAIAddress[s.l1ChainID])
 		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
