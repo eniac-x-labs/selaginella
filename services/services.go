@@ -69,9 +69,10 @@ type RpcServer struct {
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
-	privateKey *ecdsa.PrivateKey
-	l1ChainID  uint64
-	tasks      tasks.Group
+	privateKey    *ecdsa.PrivateKey
+	l1ChainID     uint64
+	zkFairChainId uint64
+	tasks         tasks.Group
 }
 
 func (s *RpcServer) Stop(ctx context.Context) error {
@@ -83,7 +84,7 @@ func (s *RpcServer) Stopped() bool {
 	return s.stopped.Load()
 }
 
-func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, l1ChainID uint64, shutdown context.CancelCauseFunc) (*RpcServer, error) {
+func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, l1ChainID uint64, zkFairChainID uint64, shutdown context.CancelCauseFunc) (*RpcServer, error) {
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
@@ -174,6 +175,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		WEthAddress:         WEthAddress,
 		privateKey:          priKey,
 		l1ChainID:           l1ChainID,
+		zkFairChainId:       zkFairChainID,
 		tasks: tasks.Group{HandleCrit: func(err error) {
 			shutdown(fmt.Errorf("critical error in selaginella processor: %w", err))
 		}},
@@ -491,6 +493,12 @@ func (s *RpcServer) SendBridgeTransaction() error {
 					tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.TokenAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
 					if err != nil {
 						log.Error("get bridge finalize l1 erc20 by abi fail", "error", err)
+						return err
+					}
+				} else if chainId == s.zkFairChainId && bridgeTx.TokenAddress.String() == s.USDCAddress[s.zkFairChainId].String() {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize zkfair usdc by abi fail", "error", err)
 						return err
 					}
 				} else {
@@ -838,7 +846,8 @@ func (s *RpcServer) CompletePoolAndNew() error {
 	var cOpts *bind.CallOpts
 	var tOpts *bind.TransactOpts
 	var err error
-	var newPools []bindings.IL1PoolManagerPool
+	var newCPools []bindings.IL1PoolManagerPool
+	var newPools []*bindings.IL1PoolManagerPool
 	var tx *types.Transaction
 	var finalTx *types.Transaction
 	var receipt *types.Receipt
@@ -876,26 +885,41 @@ func (s *RpcServer) CompletePoolAndNew() error {
 	} else {
 		l1EthPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
+	l1EthPool.Token = s.EthAddress[s.l1ChainID]
+	newPools = append(newPools, &l1EthPool)
+
 	if wethPoolLength.Uint64() > 1 {
 		l1WthPool, err = s.L1BridgeContract.GetPool(cOpts, s.WEthAddress[s.l1ChainID], new(big.Int).Sub(wethPoolLength, new(big.Int).SetUint64(2)))
 	} else {
 		l1WthPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
+	l1WthPool.Token = s.WEthAddress[s.l1ChainID]
+	newPools = append(newPools, &l1WthPool)
+
 	if usdtPoolLength.Uint64() > 1 {
 		l1UsdtPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDTAddress[s.l1ChainID], new(big.Int).Sub(usdtPoolLength, new(big.Int).SetUint64(2)))
 	} else {
 		l1UsdtPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
+	l1UsdtPool.Token = s.USDTAddress[s.l1ChainID]
+	newPools = append(newPools, &l1UsdtPool)
+
 	if usdcPoolLength.Uint64() > 1 {
 		l1UsdcPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDCAddress[s.l1ChainID], new(big.Int).Sub(usdcPoolLength, new(big.Int).SetUint64(2)))
 	} else {
 		l1UsdcPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
+	l1UsdcPool.Token = s.USDCAddress[s.l1ChainID]
+	newPools = append(newPools, &l1UsdcPool)
+
 	if daiPoolLength.Uint64() > 1 {
 		l1DaiPool, err = s.L1BridgeContract.GetPool(cOpts, s.DAIAddress[s.l1ChainID], new(big.Int).Sub(daiPoolLength, new(big.Int).SetUint64(2)))
 	} else {
 		l1DaiPool.TotalAmount = new(big.Int).SetUint64(0)
 	}
+	l1DaiPool.Token = s.DAIAddress[s.l1ChainID]
+	newPools = append(newPools, &l1DaiPool)
+
 	if err != nil {
 		log.Error("get pool fail", "err", err)
 		return err
@@ -907,13 +931,12 @@ func (s *RpcServer) CompletePoolAndNew() error {
 	if time.Now().Unix() >= int64(s.poolEndTimestamp) {
 		tOpts, err = s.newTransactOpts(ctx, s.l1ChainID)
 
-		newPools, err = s.newPools(l1EthPool, l1WthPool, l1UsdtPool, l1UsdcPool, l1DaiPool)
+		newCPools, err = s.newPools(newPools)
 		if err != nil {
 			return err
 		}
-		fmt.Println(newPools)
 
-		tx, err = s.L1BridgeContract.CompletePoolAndNew(tOpts, newPools)
+		tx, err = s.L1BridgeContract.CompletePoolAndNew(tOpts, newCPools)
 		if err != nil {
 			log.Error("get l1 bridge complete pool and new by abi fail", "error", err)
 			return err
@@ -961,56 +984,20 @@ func getTransactionReceipt(client node.EthClient, tx types.Transaction) (*types.
 	}
 }
 
-func (s *RpcServer) newPools(ethPool bindings.IL1PoolManagerPool, wethPool bindings.IL1PoolManagerPool, usdtPool bindings.IL1PoolManagerPool, usdcPool bindings.IL1PoolManagerPool, daiPool bindings.IL1PoolManagerPool) ([]bindings.IL1PoolManagerPool, error) {
-	var newPools []bindings.IL1PoolManagerPool
-	var newPool bindings.IL1PoolManagerPool
-	//var totalFee *big.Int
-	var err error
+func (s *RpcServer) newPools(newPools []*bindings.IL1PoolManagerPool) (newCPools []bindings.IL1PoolManagerPool, err error) {
+	var totalFee *big.Int
 
-	newPool.TotalFeeClaimed = new(big.Int).SetUint64(0)
-	newPool.TotalAmount = new(big.Int).SetUint64(0)
-	newPool.TotalFee = new(big.Int).SetUint64(0)
+	for _, newPool := range newPools {
+		newPool.TotalFeeClaimed = new(big.Int).SetUint64(0)
+		newPool.TotalAmount = new(big.Int).SetUint64(0)
+		newPool.TotalFee = new(big.Int).SetUint64(0)
+		totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), newPool.Token)
+		newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
+		newFee.Div(newFee, big.NewInt(100))
+		newPool.TotalFee = newFee
 
-	if ethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
-		newPool.Token = s.EthAddress[s.l1ChainID]
-		//totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.EthAddress[s.l1ChainID])
-		//newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
-		//newFee.Div(newFee, big.NewInt(100))
-		//newPool.TotalFee = newFee
-		newPools = append(newPools, newPool)
+		newCPools = append(newCPools, *newPool)
 	}
-	//if wethPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
-	//	newPool.Token = s.WEthAddress[s.l1ChainID]
-	//	//totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.WEthAddress[s.l1ChainID])
-	//	//newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
-	//	//newFee.Div(newFee, big.NewInt(100))
-	//	//newPool.TotalFee = newFee
-	//	newPools = append(newPools, newPool)
-	//}
-	//if usdtPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
-	//	newPool.Token = s.USDTAddress[s.l1ChainID]
-	//	//totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDTAddress[s.l1ChainID])
-	//	//newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
-	//	//newFee.Div(newFee, big.NewInt(100))
-	//	//newPool.TotalFee = newFee
-	//	newPools = append(newPools, newPool)
-	//}
-	//if usdcPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
-	//	newPool.Token = s.USDCAddress[s.l1ChainID]
-	//	//totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.USDCAddress[s.l1ChainID])
-	//	//newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
-	//	//newFee.Div(newFee, big.NewInt(100))
-	//	//newPool.TotalFee = newFee
-	//	newPools = append(newPools, newPool)
-	//}
-	//if daiPool.TotalAmount.Cmp(new(big.Int).SetUint64(0)) >= 0 {
-	//	//newPool.Token = s.DAIAddress[s.l1ChainID]
-	//	//totalFee, err = s.db.CrossChainTransfer.GetPeriodTotalFee(uint64(s.poolStartTimestamp), uint64(s.poolEndTimestamp), s.DAIAddress[s.l1ChainID])
-	//	//newFee := new(big.Int).Mul(totalFee, big.NewInt(92))
-	//	//newFee.Div(newFee, big.NewInt(100))
-	//	//newPool.TotalFee = newFee
-	//	newPools = append(newPools, newPool)
-	//}
 
-	return newPools, err
+	return newCPools, err
 }

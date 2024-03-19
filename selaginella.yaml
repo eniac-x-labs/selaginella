@@ -61,6 +61,15 @@ rpcs:
     usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
+  - rpc_url: 'https://testnet-rpc.zkfair.io'
+    chain_id: 43851
+    founding_pool_address: '0x89bc318D74eE9B3b28252Ae94444414676d480F4'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0x4200000000000000000000000000000000000006'
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0x02859DC18CaA9C4c61A421D299D53cB1F121DC86'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+
 database:
   db_host: "postgresql"
   db_port: 5432

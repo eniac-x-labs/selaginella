@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -190,9 +191,12 @@ func (c *crossChainTransferDB) UpdateCrossChainTransferTransactionHash(transfer 
 
 func (c *crossChainTransferDB) GetPeriodTotalFee(startTimestamp uint64, endTimeStamp uint64, tokenAddress common.Address) (*big.Int, error) {
 	var totalFee *big.Int
-	err := c.gorm.Table("cross_chain_transfer").Where("timestamp >= ? and timestamp < ? and token_address = ?", startTimestamp, endTimeStamp, tokenAddress.String()).Select("SUM(fee) as total_fee").Row().Scan(&totalFee)
+	err := c.gorm.Table("cross_chain_transfer").Where("timestamp >= ? and timestamp < ? and token_address = ?", startTimestamp, endTimeStamp, strings.ToLower(tokenAddress.String())).Select("SUM(fee) as total_fee").Row().Scan(&totalFee)
 	if err != nil {
 		return nil, err
+	}
+	if totalFee == nil {
+		return new(big.Int).SetUint64(0), nil
 	}
 	return totalFee, nil
 }
