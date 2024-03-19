@@ -173,6 +173,9 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		L2BridgeContract:    l2BridgeContracts,
 		EthAddress:          EthAddress,
 		WEthAddress:         WEthAddress,
+		USDTAddress:         USDTAddress,
+		USDCAddress:         USDCAddress,
+		DAIAddress:          DAIAddress,
 		privateKey:          priKey,
 		l1ChainID:           l1ChainID,
 		zkFairChainId:       zkFairChainID,
@@ -445,8 +448,6 @@ func (s *RpcServer) SendBridgeTransaction() error {
 		log.Warn("no more bridge transaction need to be sent")
 		return nil
 	}
-	fmt.Println(s.zkFairChainId)
-	fmt.Println(s.USDCAddress[s.zkFairChainId].String())
 
 	for chainId, client := range s.ethClients {
 		if chainId == bridgeTx.DestChainId.Uint64() {
