@@ -70,6 +70,16 @@ rpcs:
     usdc_address: '0x02859DC18CaA9C4c61A421D299D53cB1F121DC86'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
+  - rpc_url: 'https://testrpc.x1.tech/'
+    chain_id: 195
+    founding_pool_address: '0xdb196c84731d46a06e5209fb97313431b214349b'
+    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    weth_address: '0xbec7859bc3d0603bec454f7194173e36bf2aa5c8'
+    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    usdc_address: '0x02859DC18CaA9C4c61A421D299D53cB1F121DC86'
+    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+
+
 database:
   db_host: "postgresql"
   db_port: 5432

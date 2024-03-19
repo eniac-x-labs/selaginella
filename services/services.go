@@ -72,6 +72,7 @@ type RpcServer struct {
 	privateKey    *ecdsa.PrivateKey
 	l1ChainID     uint64
 	zkFairChainId uint64
+	x1ChainId     uint64
 	tasks         tasks.Group
 }
 
@@ -84,7 +85,7 @@ func (s *RpcServer) Stopped() bool {
 	return s.stopped.Load()
 }
 
-func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, l1ChainID uint64, zkFairChainID uint64, shutdown context.CancelCauseFunc) (*RpcServer, error) {
+func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, l1ChainID uint64, zkFairChainID uint64, x1ChainID uint64, shutdown context.CancelCauseFunc) (*RpcServer, error) {
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
@@ -179,6 +180,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		privateKey:          priKey,
 		l1ChainID:           l1ChainID,
 		zkFairChainId:       zkFairChainID,
+		x1ChainId:           x1ChainID,
 		tasks: tasks.Group{HandleCrit: func(err error) {
 			shutdown(fmt.Errorf("critical error in selaginella processor: %w", err))
 		}},
@@ -466,6 +468,12 @@ func (s *RpcServer) SendBridgeTransaction() error {
 						log.Error("get bridge finalize l1 eth by abi fail", "error", err)
 						return err
 					}
+				} else if chainId == s.x1ChainId || chainId == s.zkFairChainId {
+					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, s.WEthAddress[chainId], bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize l2 eth by abi fail", "error", err)
+						return err
+					}
 				} else {
 					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
 					if err != nil {
@@ -492,7 +500,7 @@ func (s *RpcServer) SendBridgeTransaction() error {
 				log.Info("get bridge finalize weth by abi success")
 
 			default:
-				if chainId == s.l1ChainID {
+				if chainId == s.l1ChainID && (chainId != s.x1ChainId || chainId != s.zkFairChainId) {
 					tx, err = s.L1BridgeContract.BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.TokenAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
 					if err != nil {
 						log.Error("get bridge finalize l1 erc20 by abi fail", "error", err)
@@ -503,6 +511,46 @@ func (s *RpcServer) SendBridgeTransaction() error {
 					if err != nil {
 						log.Error("get bridge finalize zkfair usdc by abi fail", "error", err)
 						return err
+					}
+				} else if bridgeTx.SourceChainId.Uint64() == s.zkFairChainId && chainId == s.l1ChainID && bridgeTx.TokenAddress.String() == s.WEthAddress[s.zkFairChainId].String() {
+					tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize zkfair weth by abi fail", "error", err)
+						return err
+					}
+				} else if bridgeTx.SourceChainId.Uint64() == s.zkFairChainId && chainId != s.l1ChainID && bridgeTx.TokenAddress.String() == s.WEthAddress[s.zkFairChainId].String() {
+					if chainId != s.x1ChainId {
+						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+						if err != nil {
+							log.Error("get bridge finalize weth by abi fail", "error", err)
+							return err
+						}
+					} else {
+						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, s.WEthAddress[s.x1ChainId], bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+						if err != nil {
+							log.Error("get bridge finalize weth by abi fail", "error", err)
+							return err
+						}
+					}
+				} else if bridgeTx.SourceChainId.Uint64() == s.x1ChainId && chainId == s.l1ChainID && bridgeTx.TokenAddress.String() == s.WEthAddress[s.x1ChainId].String() {
+					tx, err = s.L1BridgeContract.BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+					if err != nil {
+						log.Error("get bridge finalize x1 weth by abi fail", "error", err)
+						return err
+					}
+				} else if bridgeTx.SourceChainId.Uint64() == s.x1ChainId && chainId != s.l1ChainID && bridgeTx.TokenAddress.String() == s.WEthAddress[s.zkFairChainId].String() {
+					if chainId != s.zkFairChainId {
+						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+						if err != nil {
+							log.Error("get bridge finalize weth by abi fail", "error", err)
+							return err
+						}
+					} else {
+						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, s.WEthAddress[s.zkFairChainId], bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+						if err != nil {
+							log.Error("get bridge finalize weth by abi fail", "error", err)
+							return err
+						}
 					}
 				} else {
 					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.TokenAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
