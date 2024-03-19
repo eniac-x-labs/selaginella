@@ -445,6 +445,7 @@ func (s *RpcServer) SendBridgeTransaction() error {
 		log.Warn("no more bridge transaction need to be sent")
 		return nil
 	}
+	fmt.Println(s.zkFairChainId)
 
 	for chainId, client := range s.ethClients {
 		if chainId == bridgeTx.DestChainId.Uint64() {
