@@ -73,6 +73,11 @@ var (
 		Usage:   "zkFair Chain ID",
 		EnvVars: []string{"SELAGINELLA_ZKFAIR_CHAIN_ID"},
 	}
+	X1ChainIDFlag = &cli.Uint64Flag{
+		Name:    "x1-chain-id",
+		Usage:   "okx x1 Chain ID",
+		EnvVars: []string{"SELAGINELLA_X1_CHAIN_ID"},
+	}
 	L1TransferMultipleFlag = &cli.Uint64Flag{
 		Name:    "l1-transfer-multiple",
 		Usage:   "The corresponding capital multiple is transferred into l1",
@@ -121,8 +126,9 @@ func runGrpcServer(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.L
 
 	l1ChainID := ctx.Uint64(L1ChainIDFlag.Name)
 	zkFairChainID := ctx.Uint64(ZkFairChainIDFlag.Name)
+	x1ChainID := ctx.Uint64(X1ChainIDFlag.Name)
 
-	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, l1ChainID, zkFairChainID, shutdown)
+	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, l1ChainID, zkFairChainID, x1ChainID, shutdown)
 }
 
 func runMigrations(ctx *cli.Context) error {
@@ -190,7 +196,7 @@ func runExporter(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lif
 }
 
 func newCli(GitCommit string, GitDate string) *cli.App {
-	flags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1ChainIDFlag, ZkFairChainIDFlag}
+	flags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1ChainIDFlag, ZkFairChainIDFlag, X1ChainIDFlag}
 	migrationFlags := []cli.Flag{MigrationsFlag, ConfigFlag}
 	exporterFlags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1ChainIDFlag, L1TransferMultipleFlag, L2TransferMultipleFlag}
 	return &cli.App{
