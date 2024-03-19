@@ -446,6 +446,7 @@ func (s *RpcServer) SendBridgeTransaction() error {
 		return nil
 	}
 	fmt.Println(s.zkFairChainId)
+	fmt.Println(s.USDCAddress[s.zkFairChainId].String())
 
 	for chainId, client := range s.ethClients {
 		if chainId == bridgeTx.DestChainId.Uint64() {
