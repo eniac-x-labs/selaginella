@@ -28,6 +28,7 @@ type RPC struct {
 	USDTAddress         string `yaml:"usdt_address"`
 	USDCAddress         string `yaml:"usdc_address"`
 	DAIAddress          string `yaml:"dai_address"`
+	OKBAddress          string `yaml:"okb_address"`
 }
 
 type Exporter struct {
