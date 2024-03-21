@@ -23,17 +23,7 @@ COPY --from=builder /app/selaginella/selaginella.yaml /app/selaginella/selaginel
 COPY --from=builder /app/selaginella/migrations /app/selaginella/migrations
 
 WORKDIR /app
-
 ENV SELAGINELLA_MIGRATIONS_DIR="/app/selaginella/migrations"
 ENV SELAGINELLA_CONFIG="/app/selaginella/selaginella.yaml"
-#ENV SELAGINELLA_MIGRATIONS_DIR="./migrations"
-ENV SELAGINELLA_ENABLE_HSM=false
-ENV SELAGINELLA_HSM_API_NAME=""
-ENV SELAGINELLA_HSM_ADDRESS=""
-ENV SELAGINELLA_HSM_CREDEN=""
-ENV SELAGINELLA_PRIVATE_KEY="0f0b59bddf091da85ebee2d547b8e8c2d2a92fa23982bc54fe13d6e439b5f4e8"
-ENV SELAGINELLA_L1_CHAIN_ID=11155111
-ENV SELAGINELLA_L1_TRANSFER_MULTIPLE=3
-ENV SELAGINELLA_L2_TRANSFER_MULTIPLE=3
 
 CMD ["selaginella", "grpc", "--config", "/app/selaginella/selaginella.yaml"]

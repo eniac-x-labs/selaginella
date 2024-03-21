@@ -29,6 +29,11 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Release.Name }}
+          envFrom:
+          - configMapRef:
+              name: selaginella-config
+          - secretRef:
+              name: selaginella-secret
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -47,6 +52,27 @@ spec:
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        - name: {{ .Release.Name }}-exporter
+          command:
+          - selaginella
+          - exporter
+          envFrom:
+          - configMapRef:
+              name: selaginella-config
+          - secretRef:
+              name: selaginella-secret
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- range $index, $val := .Values.ports }}
+            - name: {{ $val.name }}
+              containerPort: {{ $val.portNumber }}
+              protocol: TCP
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       initContainers:
