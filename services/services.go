@@ -672,10 +672,24 @@ func (s *RpcServer) SendBridgeTransaction() error {
 						}
 					}
 				} else {
-					tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.TokenAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
-					if err != nil {
-						log.Error("get bridge finalize l2 erc20 by abi fail", "error", err)
-						return err
+					if bridgeTx.SourceChainId.Uint64() == s.x1ChainId && bridgeTx.TokenAddress == s.WEthAddress[s.x1ChainId] {
+						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+						if err != nil {
+							log.Error("get bridge finalize l2 eth by abi fail", "error", err)
+							return err
+						}
+					} else if bridgeTx.SourceChainId.Uint64() == s.zkFairChainId && bridgeTx.TokenAddress == s.WEthAddress[s.zkFairChainId] {
+						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+						if err != nil {
+							log.Error("get bridge finalize l2 eth by abi fail", "error", err)
+							return err
+						}
+					} else {
+						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeERC20(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.TokenAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
+						if err != nil {
+							log.Error("get bridge finalize l2 erc20 by abi fail", "error", err)
+							return err
+						}
 					}
 				}
 			}
