@@ -675,7 +675,7 @@ func (s *RpcServer) SendBridgeTransaction() error {
 					if bridgeTx.SourceChainId.Uint64() == s.x1ChainId && bridgeTx.TokenAddress == s.WEthAddress[s.x1ChainId] {
 						tx, err = s.L2BridgeContract[chainId].BridgeFinalizeETH(opts, bridgeTx.SourceChainId, bridgeTx.DestChainId, bridgeTx.DestReceiveAddress, bridgeTx.Amount, bridgeTx.Fee, bridgeTx.Nonce)
 						if err != nil {
-							log.Error("get bridge finalize l2 eth by abi fail", "error", err)
+							log.Error("get bridge x1 finalize eth by abi fail", "error", err)
 							return err
 						}
 					} else if bridgeTx.SourceChainId.Uint64() == s.zkFairChainId && bridgeTx.TokenAddress == s.WEthAddress[s.zkFairChainId] {
