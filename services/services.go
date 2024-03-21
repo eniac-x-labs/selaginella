@@ -1050,60 +1050,19 @@ func (s *RpcServer) CompletePoolAndNew() error {
 	}
 
 	ethPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.EthAddress[s.l1ChainID])
-	wethPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.WEthAddress[s.l1ChainID])
-	usdtPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.USDTAddress[s.l1ChainID])
-	usdcPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.USDCAddress[s.l1ChainID])
-	daiPoolLength, err := s.L1BridgeContract.GetPoolLength(cOpts, s.DAIAddress[s.l1ChainID])
+
 	if err != nil {
 		log.Error("get pool length fail", "err", err)
 		return err
 	}
 
 	var l1EthPool bindings.IL1PoolManagerPool
-	var l1WthPool bindings.IL1PoolManagerPool
-	var l1UsdtPool bindings.IL1PoolManagerPool
-	var l1UsdcPool bindings.IL1PoolManagerPool
-	var l1DaiPool bindings.IL1PoolManagerPool
 
 	if ethPoolLength.Uint64() > 1 {
 		l1EthPool, err = s.L1BridgeContract.GetPool(cOpts, s.EthAddress[s.l1ChainID], new(big.Int).Sub(ethPoolLength, new(big.Int).SetUint64(2)))
-	} else {
-		l1EthPool.TotalAmount = new(big.Int).SetUint64(0)
+		l1EthPool.Token = s.EthAddress[s.l1ChainID]
+		newPools = append(newPools, &l1EthPool)
 	}
-	l1EthPool.Token = s.EthAddress[s.l1ChainID]
-	newPools = append(newPools, &l1EthPool)
-
-	if wethPoolLength.Uint64() > 1 {
-		l1WthPool, err = s.L1BridgeContract.GetPool(cOpts, s.WEthAddress[s.l1ChainID], new(big.Int).Sub(wethPoolLength, new(big.Int).SetUint64(2)))
-	} else {
-		l1WthPool.TotalAmount = new(big.Int).SetUint64(0)
-	}
-	l1WthPool.Token = s.WEthAddress[s.l1ChainID]
-	newPools = append(newPools, &l1WthPool)
-
-	if usdtPoolLength.Uint64() > 1 {
-		l1UsdtPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDTAddress[s.l1ChainID], new(big.Int).Sub(usdtPoolLength, new(big.Int).SetUint64(2)))
-	} else {
-		l1UsdtPool.TotalAmount = new(big.Int).SetUint64(0)
-	}
-	l1UsdtPool.Token = s.USDTAddress[s.l1ChainID]
-	newPools = append(newPools, &l1UsdtPool)
-
-	if usdcPoolLength.Uint64() > 1 {
-		l1UsdcPool, err = s.L1BridgeContract.GetPool(cOpts, s.USDCAddress[s.l1ChainID], new(big.Int).Sub(usdcPoolLength, new(big.Int).SetUint64(2)))
-	} else {
-		l1UsdcPool.TotalAmount = new(big.Int).SetUint64(0)
-	}
-	l1UsdcPool.Token = s.USDCAddress[s.l1ChainID]
-	newPools = append(newPools, &l1UsdcPool)
-
-	if daiPoolLength.Uint64() > 1 {
-		l1DaiPool, err = s.L1BridgeContract.GetPool(cOpts, s.DAIAddress[s.l1ChainID], new(big.Int).Sub(daiPoolLength, new(big.Int).SetUint64(2)))
-	} else {
-		l1DaiPool.TotalAmount = new(big.Int).SetUint64(0)
-	}
-	l1DaiPool.Token = s.DAIAddress[s.l1ChainID]
-	newPools = append(newPools, &l1DaiPool)
 
 	if err != nil {
 		log.Error("get pool fail", "err", err)
