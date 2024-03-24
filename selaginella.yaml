@@ -16,6 +16,9 @@ rpcs:
     usdc_address: '0x02859DC18CaA9C4c61A421D299D53cB1F121DC86'
     dai_address: '0x4200000000000000000000000000000000000006'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
   - rpc_url: 'https://scroll-sepolia.blockpi.network/v1/rpc/public'
     chain_id: 534351
@@ -26,6 +29,9 @@ rpcs:
     usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
   - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
     chain_id: 1442
@@ -36,6 +42,9 @@ rpcs:
     usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
@@ -46,6 +55,9 @@ rpcs:
     usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
   - rpc_url: 'https://base-sepolia.g.alchemy.com/v2/XBMhzm0JcYtvq35NAbDOxEVI3NzqgAb3'
     chain_id: 84532
@@ -56,6 +68,9 @@ rpcs:
     usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
   - rpc_url: 'https://arb-sepolia.g.alchemy.com/v2/NBY1oJ2p9rGIqN2uvX_2gpc0eSkGWw1l'
     chain_id: 421614
@@ -66,6 +81,9 @@ rpcs:
     usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
   - rpc_url: 'https://testnet-rpc.zkfair.io'
     chain_id: 43851
@@ -76,6 +94,9 @@ rpcs:
     usdc_address: '0x02859DC18CaA9C4c61A421D299D53cB1F121DC86'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
   - rpc_url: 'https://testrpc.x1.tech/'
     chain_id: 195
@@ -86,6 +107,9 @@ rpcs:
     usdc_address: '0x02859DC18CaA9C4c61A421D299D53cB1F121DC86'
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 
 database:
   db_host: "postgresql"

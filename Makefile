@@ -13,6 +13,7 @@ BINARY_NAME=selaginella
 
 L1POOL_ABI_ARTIFACT := bindings/abi/L1PoolManager.json
 L2POOL_ABI_ARTIFACT := bindings/abi/L2PoolManager.json
+STRATEGYBASE_ABI_ARTIFACT := bindings/abi/strategyBase.json
 
 all: test build
 
@@ -64,5 +65,21 @@ binding-l2p:
 
 	rm $(temp)
 
-.PHONY: all build test clean run deps binding-l1p binding-l2p
+binding-sB:
+	$(eval temp := $(shell mktemp))
+
+	cat $(STRATEGYBASE_ABI_ARTIFACT) \
+	| jq -r .bytecode.object > $(temp)
+
+	cat $(STRATEGYBASE_ABI_ARTIFACT) \
+	| jq .abi \
+	| abigen --pkg bindings \
+	--abi - \
+	--out bindings/bvm_strategy_base.go \
+	--type StrategyBase \
+	--bin $(temp)
+
+	rm $(temp)
+
+.PHONY: all build test clean run deps binding-l1p binding-l2p binding-sB
 

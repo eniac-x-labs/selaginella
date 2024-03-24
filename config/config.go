@@ -20,16 +20,19 @@ type DB struct {
 }
 
 type RPC struct {
-	RpcUrl              string `yaml:"rpc_url"`
-	ChainId             uint64 `yaml:"chain_id"`
-	FoundingPoolAddress string `yaml:"founding_pool_address"`
-	EthAddress          string `yaml:"eth_address"`
-	WEthAddress         string `yaml:"weth_address"`
-	USDTAddress         string `yaml:"usdt_address"`
-	USDCAddress         string `yaml:"usdc_address"`
-	DAIAddress          string `yaml:"dai_address"`
-	OKBAddress          string `yaml:"okb_address"`
-	MNTAddress          string `yaml:"mnt_address"`
+	RpcUrl                string `yaml:"rpc_url"`
+	ChainId               uint64 `yaml:"chain_id"`
+	FoundingPoolAddress   string `yaml:"founding_pool_address"`
+	EthAddress            string `yaml:"eth_address"`
+	WEthAddress           string `yaml:"weth_address"`
+	USDTAddress           string `yaml:"usdt_address"`
+	USDCAddress           string `yaml:"usdc_address"`
+	DAIAddress            string `yaml:"dai_address"`
+	OKBAddress            string `yaml:"okb_address"`
+	MNTAddress            string `yaml:"mnt_address"`
+	DaStrategyAddress     string `yaml:"da_strategy_address"`
+	GamingStrategyAddress string `yaml:"gaming_strategy_address"`
+	SocialStrategyAddress string `yaml:"social_strategy_address"`
 }
 
 type Exporter struct {

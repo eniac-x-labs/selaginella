@@ -53,21 +53,28 @@ type HsmConfig struct {
 type RpcServer struct {
 	*RpcServerConfig
 	*HsmConfig
-	db                  *database.DB
-	ethClients          map[uint64]node.EthClient
-	RawL1BridgeContract *bind.BoundContract
-	RawL2BridgeContract map[uint64]*bind.BoundContract
-	L1BridgeContract    *bindings.L1PoolManager
-	L2BridgeContract    map[uint64]*bindings.L2PoolManager
-	EthAddress          map[uint64]common.Address
-	WEthAddress         map[uint64]common.Address
-	USDTAddress         map[uint64]common.Address
-	USDCAddress         map[uint64]common.Address
-	DAIAddress          map[uint64]common.Address
-	OKBAddress          map[uint64]common.Address
-	MNTAddress          map[uint64]common.Address
-	poolStartTimestamp  uint32
-	poolEndTimestamp    uint32
+	db                        *database.DB
+	ethClients                map[uint64]node.EthClient
+	RawL1BridgeContract       *bind.BoundContract
+	RawL2BridgeContract       map[uint64]*bind.BoundContract
+	L1BridgeContract          *bindings.L1PoolManager
+	L1BridgeContractAddress   common.Address
+	L2BridgeContract          map[uint64]*bindings.L2PoolManager
+	DAStrategyContract        map[uint64]*bindings.StrategyBase
+	RawDAStrategyContract     map[uint64]*bind.BoundContract
+	GamingStrategyContract    map[uint64]*bindings.StrategyBase
+	RawGamingStrategyContract map[uint64]*bind.BoundContract
+	SocialStrategyContract    map[uint64]*bindings.StrategyBase
+	RawSocialStrategyContract map[uint64]*bind.BoundContract
+	EthAddress                map[uint64]common.Address
+	WEthAddress               map[uint64]common.Address
+	USDTAddress               map[uint64]common.Address
+	USDCAddress               map[uint64]common.Address
+	DAIAddress                map[uint64]common.Address
+	OKBAddress                map[uint64]common.Address
+	MNTAddress                map[uint64]common.Address
+	poolStartTimestamp        uint32
+	poolEndTimestamp          uint32
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
@@ -101,6 +108,12 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	DAIAddress := make(map[uint64]common.Address)
 	OKBAddress := make(map[uint64]common.Address)
 	MNTAddress := make(map[uint64]common.Address)
+	rawDaStrategyContracts := make(map[uint64]*bind.BoundContract)
+	rawGamingStrategyContracts := make(map[uint64]*bind.BoundContract)
+	rawSocialStrategyContracts := make(map[uint64]*bind.BoundContract)
+	daStrategyContracts := make(map[uint64]*bindings.StrategyBase)
+	gamingStrategyContracts := make(map[uint64]*bindings.StrategyBase)
+	socialStrategyContracts := make(map[uint64]*bindings.StrategyBase)
 
 	for i := range chainRpcCfg {
 		if chainRpcCfg[i].ChainId == l1ChainID {
@@ -111,7 +124,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			}
 			ethClients[chainRpcCfg[i].ChainId] = client
 
-			l1Parsed, err := abi.JSON(strings.NewReader(
+			l1PoolParsed, err := abi.JSON(strings.NewReader(
 				bindings.L1PoolManagerABI,
 			))
 			if err != nil {
@@ -121,12 +134,13 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 
 			l1Client, _ := node.DialEthClientWithTimeout(ctx, chainRpcCfg[i].RpcUrl, false)
 			rawL1PoolContract := bind.NewBoundContract(
-				common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1Parsed, l1Client, l1Client,
+				common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1PoolParsed, l1Client, l1Client,
 				l1Client,
 			)
 			rawL1BridgeContract = rawL1PoolContract
 
 			l1PoolContract, err := bindings.NewL1PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1Client)
+
 			l1BridgeContract = l1PoolContract
 			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)
 			WEthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].WEthAddress)
@@ -152,6 +166,14 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 				return nil, err
 			}
 
+			strategyParsed, err := abi.JSON(strings.NewReader(
+				bindings.StrategyBaseABI,
+			))
+			if err != nil {
+				log.Error("selaginella parse strategy contract abi fail", "err", err)
+				return nil, err
+			}
+
 			l2Client, _ := node.DialEthClientWithTimeout(ctx, chainRpcCfg[i].RpcUrl, false)
 			rawL2PoolContract := bind.NewBoundContract(
 				common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l2Parsed, l2Client, l2Client,
@@ -159,8 +181,36 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			)
 			rawL2BridgeContracts[chainRpcCfg[i].ChainId] = rawL2PoolContract
 
+			rawDaStrategyContract := bind.NewBoundContract(
+				common.HexToAddress(chainRpcCfg[i].DaStrategyAddress), strategyParsed, l2Client, l2Client,
+				l2Client,
+			)
+			rawDaStrategyContracts[chainRpcCfg[i].ChainId] = rawDaStrategyContract
+
+			rawGamingStrategyContract := bind.NewBoundContract(
+				common.HexToAddress(chainRpcCfg[i].GamingStrategyAddress), strategyParsed, l2Client, l2Client,
+				l2Client,
+			)
+			rawGamingStrategyContracts[chainRpcCfg[i].ChainId] = rawGamingStrategyContract
+
+			rawSocialStrategyContract := bind.NewBoundContract(
+				common.HexToAddress(chainRpcCfg[i].SocialStrategyAddress), strategyParsed, l2Client, l2Client,
+				l2Client,
+			)
+			rawSocialStrategyContracts[chainRpcCfg[i].ChainId] = rawSocialStrategyContract
+
 			l2PoolContract, err := bindings.NewL2PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l2Client)
 			l2BridgeContracts[chainRpcCfg[i].ChainId] = l2PoolContract
+
+			daStrategyContract, err := bindings.NewStrategyBase(common.HexToAddress(chainRpcCfg[i].DaStrategyAddress), l2Client)
+			daStrategyContracts[chainRpcCfg[i].ChainId] = daStrategyContract
+
+			gamingStrategyContract, err := bindings.NewStrategyBase(common.HexToAddress(chainRpcCfg[i].GamingStrategyAddress), l2Client)
+			gamingStrategyContracts[chainRpcCfg[i].ChainId] = gamingStrategyContract
+
+			socialStrategyContract, err := bindings.NewStrategyBase(common.HexToAddress(chainRpcCfg[i].SocialStrategyAddress), l2Client)
+			socialStrategyContracts[chainRpcCfg[i].ChainId] = socialStrategyContract
+
 			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)
 			WEthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].WEthAddress)
 			USDTAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].USDTAddress)
@@ -173,26 +223,33 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	}
 
 	return &RpcServer{
-		RpcServerConfig:     grpcCfg,
-		db:                  db,
-		HsmConfig:           hsmCfg,
-		ethClients:          ethClients,
-		RawL1BridgeContract: rawL1BridgeContract,
-		RawL2BridgeContract: rawL2BridgeContracts,
-		L1BridgeContract:    l1BridgeContract,
-		L2BridgeContract:    l2BridgeContracts,
-		EthAddress:          EthAddress,
-		WEthAddress:         WEthAddress,
-		USDTAddress:         USDTAddress,
-		USDCAddress:         USDCAddress,
-		DAIAddress:          DAIAddress,
-		OKBAddress:          OKBAddress,
-		MNTAddress:          MNTAddress,
-		privateKey:          priKey,
-		l1ChainID:           l1ChainID,
-		zkFairChainId:       zkFairChainID,
-		x1ChainId:           x1ChainID,
-		mantleChainId:       mantleChainID,
+		RpcServerConfig:           grpcCfg,
+		db:                        db,
+		HsmConfig:                 hsmCfg,
+		ethClients:                ethClients,
+		RawL1BridgeContract:       rawL1BridgeContract,
+		RawL2BridgeContract:       rawL2BridgeContracts,
+		L1BridgeContract:          l1BridgeContract,
+		L1BridgeContractAddress:   common.HexToAddress(chainRpcCfg[l1ChainID].FoundingPoolAddress),
+		L2BridgeContract:          l2BridgeContracts,
+		DAStrategyContract:        daStrategyContracts,
+		GamingStrategyContract:    gamingStrategyContracts,
+		SocialStrategyContract:    socialStrategyContracts,
+		RawDAStrategyContract:     rawDaStrategyContracts,
+		RawGamingStrategyContract: rawGamingStrategyContracts,
+		RawSocialStrategyContract: rawSocialStrategyContracts,
+		EthAddress:                EthAddress,
+		WEthAddress:               WEthAddress,
+		USDTAddress:               USDTAddress,
+		USDCAddress:               USDCAddress,
+		DAIAddress:                DAIAddress,
+		OKBAddress:                OKBAddress,
+		MNTAddress:                MNTAddress,
+		privateKey:                priKey,
+		l1ChainID:                 l1ChainID,
+		zkFairChainId:             zkFairChainID,
+		x1ChainId:                 x1ChainID,
+		mantleChainId:             mantleChainID,
 		tasks: tasks.Group{HandleCrit: func(err error) {
 			shutdown(fmt.Errorf("critical error in selaginella processor: %w", err))
 		}},
@@ -294,6 +351,17 @@ func (s *RpcServer) Start(ctx context.Context) error {
 	s.tasks.Go(func() error {
 		for range CPTicker.C {
 			err := s.CompletePoolAndNew()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
+	XSBTicker := time.NewTicker(3 * time.Second)
+	s.tasks.Go(func() error {
+		for range XSBTicker.C {
+			err := s.metricX1StrategyBalance()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -1265,4 +1333,331 @@ func (s *RpcServer) newPools(newPools []*bindings.IL1PoolManagerPool) (newCPools
 	}
 
 	return newCPools, err
+}
+
+func (s *RpcServer) metricX1StrategyBalance() error {
+	if err := s.DaStrategyETHToL2DappLinkBridge(s.x1ChainId); err != nil {
+		return err
+	}
+
+	if err := s.GamingStrategyETHToL2DappLinkBridge(s.x1ChainId); err != nil {
+		return err
+	}
+
+	if err := s.SocialStrategyETHToL2DappLinkBridge(s.x1ChainId); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *RpcServer) DaStrategyETHToL2DappLinkBridge(chainID uint64) error {
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+	var ctx = context.Background()
+
+	latestBlock, err := s.ethClients[chainID].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	ethBalance, err := s.DAStrategyContract[chainID].TokenETHBalance(cOpts)
+	if err != nil {
+		log.Error("get da strategy eth balance fail", "err", err)
+		return err
+	}
+	if ethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+		tOpts, err = s.newTransactOpts(ctx, chainID)
+		tx, err = s.DAStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, new(big.Int).SetUint64(32))
+		if err != nil {
+			log.Error("transfer da eth to l2 dapp-link bridge by abi fail", "error", err)
+			return err
+		}
+		finalTx, err = s.RawDAStrategyContract[chainID].RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw da transfer eth to l2 dapp-link bridge fail", "error", err)
+			return err
+		}
+		err = s.ethClients[chainID].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send da transfer eth to l2 dapp-link bridge transaction fail", "error", err)
+			return err
+		}
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		if err != nil {
+			log.Error("get da transfer eth to l2 dapp-link bridge receipt fail", "error", err)
+			return err
+		}
+
+		log.Info("send da transfer eth to l2 dapp-link bridge transaction success", "tx_hash", receipt.TxHash.String())
+	}
+	return nil
+}
+
+func (s *RpcServer) GamingStrategyETHToL2DappLinkBridge(chainID uint64) error {
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+	var ctx = context.Background()
+
+	latestBlock, err := s.ethClients[chainID].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	ethBalance, err := s.GamingStrategyContract[chainID].TokenETHBalance(cOpts)
+	if err != nil {
+		log.Error("get gaming strategy eth balance fail", "err", err)
+		return err
+	}
+	if ethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+		tOpts, err = s.newTransactOpts(ctx, chainID)
+		tx, err = s.GamingStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, new(big.Int).SetUint64(32))
+		if err != nil {
+			log.Error("transfer gaming eth to l2 dapp-link bridge by abi fail", "error", err)
+			return err
+		}
+		finalTx, err = s.RawGamingStrategyContract[chainID].RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw transfer gaming eth to l2 dapp-link bridge fail", "error", err)
+			return err
+		}
+		err = s.ethClients[chainID].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send gaming transfer eth to l2 dapp-link bridge transaction fail", "error", err)
+			return err
+		}
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		if err != nil {
+			log.Error("get gaming transfer eth to l2 dapp-link bridge receipt fail", "error", err)
+			return err
+		}
+
+		log.Info("send gaming transfer eth to l2 dapp-link bridge transaction success", "tx_hash", receipt.TxHash.String())
+	}
+	return nil
+}
+
+func (s *RpcServer) SocialStrategyETHToL2DappLinkBridge(chainID uint64) error {
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+	var ctx = context.Background()
+
+	latestBlock, err := s.ethClients[chainID].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	ethBalance, err := s.SocialStrategyContract[chainID].TokenETHBalance(cOpts)
+	if err != nil {
+		log.Error("get social strategy eth balance fail", "err", err)
+		return err
+	}
+	if ethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+		tOpts, err = s.newTransactOpts(ctx, chainID)
+		tx, err = s.SocialStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, new(big.Int).SetUint64(32))
+		if err != nil {
+			log.Error("transfer social eth to l2 dapp-link bridge by abi fail", "error", err)
+			return err
+		}
+		finalTx, err = s.RawSocialStrategyContract[chainID].RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw transfer social eth to l2 dapp-link bridge fail", "error", err)
+			return err
+		}
+		err = s.ethClients[chainID].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send social transfer eth to l2 dapp-link bridge transaction fail", "error", err)
+			return err
+		}
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		if err != nil {
+			log.Error("get social transfer eth to l2 dapp-link bridge receipt fail", "error", err)
+			return err
+		}
+
+		log.Info("send social transfer eth to l2 dapp-link bridge transaction success", "tx_hash", receipt.TxHash.String())
+	}
+	return nil
+}
+
+func (s *RpcServer) transferDaWETHToL2DappLinkBridge(chainID uint64) error {
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+	var ctx = context.Background()
+
+	latestBlock, err := s.ethClients[chainID].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	wethBalance, err := s.DAStrategyContract[chainID].TokenWETHBalance(cOpts)
+	if err != nil {
+		log.Error("get da strategy weth balance fail", "err", err)
+		return err
+	}
+	if wethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+		tOpts, err = s.newTransactOpts(ctx, chainID)
+		tx, err = s.DAStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, new(big.Int).SetUint64(32))
+		if err != nil {
+			log.Error("transfer da weth to l2 dapp-link bridge by abi fail", "error", err)
+			return err
+		}
+		finalTx, err = s.RawDAStrategyContract[chainID].RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw da transfer weth to l2 dapp-link bridge fail", "error", err)
+			return err
+		}
+		err = s.ethClients[chainID].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send da transfer weth to l2 dapp-link bridge transaction fail", "error", err)
+			return err
+		}
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		if err != nil {
+			log.Error("get da transfer weth to l2 dapp-link bridge receipt fail", "error", err)
+			return err
+		}
+
+		log.Info("send da transfer weth to l2 dapp-link bridge transaction success", "tx_hash", receipt.TxHash.String())
+	}
+	return nil
+}
+
+func (s *RpcServer) transferGamingWETHToL2DappLinkBridge(chainID uint64) error {
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+	var ctx = context.Background()
+
+	latestBlock, err := s.ethClients[chainID].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	wethBalance, err := s.GamingStrategyContract[chainID].TokenWETHBalance(cOpts)
+	if err != nil {
+		log.Error("get gaming strategy weth balance fail", "err", err)
+		return err
+	}
+	if wethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+		tOpts, err = s.newTransactOpts(ctx, chainID)
+		tx, err = s.GamingStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, new(big.Int).SetUint64(32))
+		if err != nil {
+			log.Error("transfer gaming weth to l2 dapp-link bridge by abi fail", "error", err)
+			return err
+		}
+		finalTx, err = s.RawGamingStrategyContract[chainID].RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw gaming transfer weth to l2 dapp-link bridge fail", "error", err)
+			return err
+		}
+		err = s.ethClients[chainID].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send gaming transfer weth to l2 dapp-link bridge transaction fail", "error", err)
+			return err
+		}
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		if err != nil {
+			log.Error("get gaming transfer weth to l2 dapp-link bridge receipt fail", "error", err)
+			return err
+		}
+
+		log.Info("send da transfer weth to l2 dapp-link bridge transaction success", "tx_hash", receipt.TxHash.String())
+	}
+	return nil
+}
+
+func (s *RpcServer) transferSocialWETHToL2DappLinkBridge(chainID uint64) error {
+	var cOpts *bind.CallOpts
+	var tOpts *bind.TransactOpts
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var receipt *types.Receipt
+	var ctx = context.Background()
+
+	latestBlock, err := s.ethClients[chainID].GetLatestBlock()
+	if err != nil {
+		log.Error("get latest block number fail", "err", err)
+		return err
+	}
+
+	cOpts = &bind.CallOpts{
+		BlockNumber: latestBlock,
+		From:        crypto.PubkeyToAddress(s.privateKey.PublicKey),
+	}
+
+	wethBalance, err := s.SocialStrategyContract[chainID].TokenWETHBalance(cOpts)
+	if err != nil {
+		log.Error("get social strategy weth balance fail", "err", err)
+		return err
+	}
+	if wethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+		tOpts, err = s.newTransactOpts(ctx, chainID)
+		tx, err = s.SocialStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, new(big.Int).SetUint64(32))
+		if err != nil {
+			log.Error("transfer social weth to l2 dapp-link bridge by abi fail", "error", err)
+			return err
+		}
+		finalTx, err = s.RawSocialStrategyContract[chainID].RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw social transfer weth to l2 dapp-link bridge fail", "error", err)
+			return err
+		}
+		err = s.ethClients[chainID].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send social transfer weth to l2 dapp-link bridge transaction fail", "error", err)
+			return err
+		}
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		if err != nil {
+			log.Error("get social transfer weth to l2 dapp-link bridge receipt fail", "error", err)
+			return err
+		}
+
+		log.Info("send social transfer weth to l2 dapp-link bridge transaction success", "tx_hash", receipt.TxHash.String())
+	}
+	return nil
 }
