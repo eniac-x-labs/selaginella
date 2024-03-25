@@ -202,7 +202,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 func (s *RpcServer) Start(ctx context.Context) error {
 	go func(s *RpcServer) {
 		addr := fmt.Sprintf("%s:%s", s.GrpcHostname, s.GrpcPort)
-		log.Info("start rpc server", "addr", addr)
+		log.Info("start rpc server ", "addr", addr)
 
 		listener, err := net.Listen("tcp", addr)
 		if err != nil {
