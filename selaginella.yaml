@@ -118,10 +118,10 @@ rpcs:
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
 
 database:
-  db_host: "127.0.0.1"
+  db_host: "postgresql"
   db_port: 5432
   db_user: "postgres"
-  db_password: ""
+  db_password: "vVb9NhLYui"
   db_name: "selaginella"
 
 exporter:
