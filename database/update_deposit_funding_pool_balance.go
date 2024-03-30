@@ -35,7 +35,7 @@ type UpdateDepositFundingPoolBalanceDB interface {
 	StoreBatchUpdateFundingPoolBalance([]UpdateDepositFundingPoolBalance) error
 	BuildUpdateFundingPoolBalance(in *pb.UpdateDepositFundingPoolBalanceRequest, sourceHash common.Hash) UpdateDepositFundingPoolBalance
 	UpdateFundingPoolBalanceBySourceHash(sourceHash string) (*UpdateDepositFundingPoolBalance, error)
-	ChangeUpdateFundingPoolBalanceSentStatueByTxHash(txHash string) error
+	ChangeUpdateFundingPoolBalanceSentStatusByTxHash(txHash string) error
 	UpdateFundingPoolBalanceTransactionHash(UpdateDepositFundingPoolBalance) error
 }
 
@@ -106,7 +106,7 @@ func (u *updateDepositFundingPoolBalanceDB) UpdateFundingPoolBalanceBySourceHash
 	return &updateFundingPoolBalance, nil
 }
 
-func (u *updateDepositFundingPoolBalanceDB) ChangeUpdateFundingPoolBalanceSentStatueByTxHash(txHash string) error {
+func (u *updateDepositFundingPoolBalanceDB) ChangeUpdateFundingPoolBalanceSentStatusByTxHash(txHash string) error {
 	var updateFundingPoolBalance UpdateDepositFundingPoolBalance
 	result := u.gorm.Table("update_deposit_funding_pool_balance").Where("tx_hash = ?", txHash).Take(&updateFundingPoolBalance)
 	if result.Error != nil {

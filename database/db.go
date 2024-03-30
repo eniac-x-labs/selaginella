@@ -20,6 +20,8 @@ type DB struct {
 	CrossChainTransfer               CrossChainTransferDB
 	UpdateDepositFundingPoolBalance  UpdateDepositFundingPoolBalanceDB
 	UpdateWithdrawFundingPoolBalance UpdateWithdrawFundingPoolBalanceDB
+	UnstakeBatch                     UnstakeBatchDB
+	UnstakeSingle                    UnstakeSingleDB
 }
 
 func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
@@ -53,6 +55,8 @@ func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
 		CrossChainTransfer:               NewCrossChainTransferDB(gorm),
 		UpdateDepositFundingPoolBalance:  NewDepositUpdateFundingPoolBalanceDB(gorm),
 		UpdateWithdrawFundingPoolBalance: NewWithdrawUpdateFundingPoolBalanceDB(gorm),
+		UnstakeBatch:                     NewUnstakeBatchDB(gorm),
+		UnstakeSingle:                    NewUnstakeSingleDB(gorm),
 	}
 	return db, nil
 }
@@ -64,6 +68,8 @@ func (db *DB) Transaction(fn func(db *DB) error) error {
 			CrossChainTransfer:               NewCrossChainTransferDB(tx),
 			UpdateDepositFundingPoolBalance:  NewDepositUpdateFundingPoolBalanceDB(tx),
 			UpdateWithdrawFundingPoolBalance: NewWithdrawUpdateFundingPoolBalanceDB(tx),
+			UnstakeBatch:                     NewUnstakeBatchDB(tx),
+			UnstakeSingle:                    NewUnstakeSingleDB(tx),
 		}
 		return fn(txDB)
 	})

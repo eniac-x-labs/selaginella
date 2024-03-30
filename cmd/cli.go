@@ -63,26 +63,6 @@ var (
 		Usage:   "Private Key corresponding to selaginella",
 		EnvVars: []string{"SELAGINELLA_PRIVATE_KEY"},
 	}
-	L1ChainIDFlag = &cli.Uint64Flag{
-		Name:    "l1-chain-id",
-		Usage:   "L1 Chain ID",
-		EnvVars: []string{"SELAGINELLA_L1_CHAIN_ID"},
-	}
-	ZkFairChainIDFlag = &cli.Uint64Flag{
-		Name:    "zk-fair-chain-id",
-		Usage:   "zkFair Chain ID",
-		EnvVars: []string{"SELAGINELLA_ZKFAIR_CHAIN_ID"},
-	}
-	X1ChainIDFlag = &cli.Uint64Flag{
-		Name:    "x1-chain-id",
-		Usage:   "okx x1 Chain ID",
-		EnvVars: []string{"SELAGINELLA_X1_CHAIN_ID"},
-	}
-	MantleChainIDFlag = &cli.Uint64Flag{
-		Name:    "mantle-chain-id",
-		Usage:   "mantle Chain ID",
-		EnvVars: []string{"SELAGINELLA_MANTLE_CHAIN_ID"},
-	}
 	L1TransferMultipleFlag = &cli.Uint64Flag{
 		Name:    "l1-transfer-multiple",
 		Usage:   "The corresponding capital multiple is transferred into l1",
@@ -129,12 +109,7 @@ func runGrpcServer(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.L
 		return nil, err
 	}
 
-	l1ChainID := ctx.Uint64(L1ChainIDFlag.Name)
-	zkFairChainID := ctx.Uint64(ZkFairChainIDFlag.Name)
-	x1ChainID := ctx.Uint64(X1ChainIDFlag.Name)
-	mantleChainID := ctx.Uint64(MantleChainIDFlag.Name)
-
-	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, l1ChainID, zkFairChainID, x1ChainID, mantleChainID, shutdown)
+	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, cfg.ChainId, cfg.L1StakingManagerAddr, shutdown)
 }
 
 func runMigrations(ctx *cli.Context) error {
@@ -194,17 +169,15 @@ func runExporter(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lif
 		L2Multiple: ctx.Uint64(L2TransferMultipleFlag.Name),
 	}
 
-	l1ChainID := ctx.Uint64(L1ChainIDFlag.Name)
-
 	log.Info("running exporter...")
 
-	return exporter.NewExporter(ctx.Context, cfg.Exporter, hsmCfg, db, cfg.RPCs, shutdown, priKey, l1ChainID, MultipleCfg)
+	return exporter.NewExporter(ctx.Context, cfg.Exporter, hsmCfg, db, cfg.RPCs, shutdown, priKey, cfg.ChainId.L1ChainId, MultipleCfg)
 }
 
 func newCli(GitCommit string, GitDate string) *cli.App {
-	flags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1ChainIDFlag, ZkFairChainIDFlag, X1ChainIDFlag, MantleChainIDFlag}
+	flags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag}
 	migrationFlags := []cli.Flag{MigrationsFlag, ConfigFlag}
-	exporterFlags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1ChainIDFlag, L1TransferMultipleFlag, L2TransferMultipleFlag}
+	exporterFlags := []cli.Flag{ConfigFlag, EnableHsmFlag, HsmAddressFlag, HsmAPINameFlag, HsmCredenFlag, PrivateKeyFlag, L1TransferMultipleFlag, L2TransferMultipleFlag}
 	return &cli.App{
 		Version:              params.VersionWithCommit(GitCommit, GitDate),
 		Description:          "An indexer of all mantle da block data with a serving grpc api layer",

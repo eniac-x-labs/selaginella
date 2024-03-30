@@ -67,3 +67,34 @@ CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_source_hash ON u
 CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_tx_hash ON update_withdraw_funding_pool_balance(tx_hash);
 CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_dest_receive_address ON update_withdraw_funding_pool_balance(receive_address);
 CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_token_address ON update_withdraw_funding_pool_balance(token_address);
+
+CREATE TABLE IF NOT EXISTS unstake_batch (
+    guid                  VARCHAR PRIMARY KEY,
+    strategy_address      VARCHAR NOT NULL,
+    bridge_address        VARCHAR NOT NULL,
+    source_chain_id       UINT256 NOT NULL,
+    dest_chain_id         UINT256 NOT NULL,
+    tx_hash               VARCHAR NOT NULL,
+    gas_limit             UINT256 NOT NULL,
+    source_hash           VARCHAR NOT NULL,
+    status                SMALLINT DEFAULT 0,
+    timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
+);
+CREATE INDEX IF NOT EXISTS unstake_batch_timestamp ON unstake_batch(timestamp);
+CREATE INDEX IF NOT EXISTS unstake_batch_tx_hash ON unstake_batch(tx_hash);
+CREATE INDEX IF NOT EXISTS unstake_batch_source_hash ON unstake_batch(source_hash);
+
+CREATE TABLE IF NOT EXISTS unstake_single (
+     guid                  VARCHAR PRIMARY KEY,
+     staker_address        VARCHAR NOT NULL,
+     strategy_address      VARCHAR NOT NULL,
+     shares_amount         UINT256 NOT NULL,
+     chain_id              UINT256 NOT NULL,
+     tx_hash               VARCHAR NOT NULL,
+     source_hash           VARCHAR NOT NULL,
+     status                SMALLINT DEFAULT 0,
+     timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
+);
+CREATE INDEX IF NOT EXISTS unstake_single_timestamp ON unstake_single(timestamp);
+CREATE INDEX IF NOT EXISTS unstake_single_tx_hash ON unstake_single(tx_hash);
+CREATE INDEX IF NOT EXISTS unstake_single_source_hash ON unstake_single(source_hash);

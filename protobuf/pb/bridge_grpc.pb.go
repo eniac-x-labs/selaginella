@@ -26,6 +26,8 @@ type BridgeServiceClient interface {
 	ChangeTransferStatus(ctx context.Context, in *CrossChainTransferStatusRequest, opts ...grpc.CallOption) (*CrossChainTransferStatusResponse, error)
 	UpdateDepositFundingPoolBalance(ctx context.Context, in *UpdateDepositFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateDepositFundingPoolBalanceResponse, error)
 	UpdateWithdrawFundingPoolBalance(ctx context.Context, in *UpdateWithdrawFundingPoolBalanceRequest, opts ...grpc.CallOption) (*UpdateWithdrawFundingPoolBalanceResponse, error)
+	UnstakeBatch(ctx context.Context, in *UnstakeBatchRequest, opts ...grpc.CallOption) (*UnstakeBatchResponse, error)
+	UnstakeSingle(ctx context.Context, in *UnstakeSingleRequest, opts ...grpc.CallOption) (*UnstakeSingleResponse, error)
 }
 
 type bridgeServiceClient struct {
@@ -72,6 +74,24 @@ func (c *bridgeServiceClient) UpdateWithdrawFundingPoolBalance(ctx context.Conte
 	return out, nil
 }
 
+func (c *bridgeServiceClient) UnstakeBatch(ctx context.Context, in *UnstakeBatchRequest, opts ...grpc.CallOption) (*UnstakeBatchResponse, error) {
+	out := new(UnstakeBatchResponse)
+	err := c.cc.Invoke(ctx, "/selaginella.proto_rpc.BridgeService/UnstakeBatch", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bridgeServiceClient) UnstakeSingle(ctx context.Context, in *UnstakeSingleRequest, opts ...grpc.CallOption) (*UnstakeSingleResponse, error) {
+	out := new(UnstakeSingleResponse)
+	err := c.cc.Invoke(ctx, "/selaginella.proto_rpc.BridgeService/UnstakeSingle", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BridgeServiceServer is the server API for BridgeService service.
 // All implementations must embed UnimplementedBridgeServiceServer
 // for forward compatibility
@@ -80,7 +100,8 @@ type BridgeServiceServer interface {
 	ChangeTransferStatus(context.Context, *CrossChainTransferStatusRequest) (*CrossChainTransferStatusResponse, error)
 	UpdateDepositFundingPoolBalance(context.Context, *UpdateDepositFundingPoolBalanceRequest) (*UpdateDepositFundingPoolBalanceResponse, error)
 	UpdateWithdrawFundingPoolBalance(context.Context, *UpdateWithdrawFundingPoolBalanceRequest) (*UpdateWithdrawFundingPoolBalanceResponse, error)
-	mustEmbedUnimplementedBridgeServiceServer()
+	UnstakeBatch(context.Context, *UnstakeBatchRequest) (*UnstakeBatchResponse, error)
+	UnstakeSingle(context.Context, *UnstakeSingleRequest) (*UnstakeSingleResponse, error)
 }
 
 // UnimplementedBridgeServiceServer must be embedded to have forward compatible implementations.
@@ -99,11 +120,18 @@ func (UnimplementedBridgeServiceServer) UpdateDepositFundingPoolBalance(context.
 func (UnimplementedBridgeServiceServer) UpdateWithdrawFundingPoolBalance(context.Context, *UpdateWithdrawFundingPoolBalanceRequest) (*UpdateWithdrawFundingPoolBalanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateWithdrawFundingPoolBalance not implemented")
 }
+func (UnimplementedBridgeServiceServer) UnstakeBatch(context.Context, *UnstakeBatchRequest) (*UnstakeBatchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnstakeBatch not implemented")
+}
+func (UnimplementedBridgeServiceServer) UnstakeSingle(context.Context, *UnstakeSingleRequest) (*UnstakeSingleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnstakeSingle not implemented")
+}
 
 // UnsafeBridgeServiceServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to BridgeServiceServer will
 // result in compilation errors.
 type UnsafeBridgeServiceServer interface {
+	mustEmbedUnimplementedBridgeServiceServer()
 }
 
 func RegisterBridgeServiceServer(s grpc.ServiceRegistrar, srv BridgeServiceServer) {
@@ -182,6 +210,42 @@ func _BridgeService_UpdateWithdrawFundingPoolBalance_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BridgeService_UnstakeBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnstakeBatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeServiceServer).UnstakeBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/selaginella.proto_rpc.BridgeService/UnstakeBatch",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeServiceServer).UnstakeBatch(ctx, req.(*UnstakeBatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BridgeService_UnstakeSingle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnstakeSingleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeServiceServer).UnstakeSingle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/selaginella.proto_rpc.BridgeService/UnstakeSingle",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeServiceServer).UnstakeSingle(ctx, req.(*UnstakeSingleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BridgeService_ServiceDesc is the grpc.ServiceDesc for BridgeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -204,6 +268,14 @@ var BridgeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateWithdrawFundingPoolBalance",
 			Handler:    _BridgeService_UpdateWithdrawFundingPoolBalance_Handler,
+		},
+		{
+			MethodName: "UnstakeBatch",
+			Handler:    _BridgeService_UnstakeBatch_Handler,
+		},
+		{
+			MethodName: "UnstakeSingle",
+			Handler:    _BridgeService_UnstakeSingle_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
