@@ -221,7 +221,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 func (s *RpcServer) Start(ctx context.Context) error {
 	go func(s *RpcServer) {
 		addr := fmt.Sprintf("%s:%s", s.GrpcHostname, s.GrpcPort)
-		log.Info("start rpc server", "addr", addr)
+		log.Info("start rpc server ", "addr", addr)
 
 		listener, err := net.Listen("tcp", addr)
 		if err != nil {
@@ -237,7 +237,7 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		reflection.Register(gs)
 		pb.RegisterBridgeServiceServer(gs, s)
 
-		log.Info("grpc info", "port", s.GrpcPort, "address", listener.Addr().String())
+		log.Info("grpc info ", "port", s.GrpcPort, "address", listener.Addr().String())
 		if err := gs.Serve(listener); err != nil {
 			log.Error("Could not GRPC server")
 		}
