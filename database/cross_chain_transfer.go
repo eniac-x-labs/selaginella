@@ -45,7 +45,7 @@ type CrossChainTransferDB interface {
 	StoreBatchCrossChainTransfer([]CrossChainTransfer) error
 	BuildCrossChainTransfer(in *pb.CrossChainTransferRequest, sourceHash common.Hash) CrossChainTransfer
 	CrossChainTransferBySourceHash(sourceHash string) (*CrossChainTransfer, error)
-	ChangeCrossChainTransferSentStatueByTxHash(txHash string) error
+	ChangeCrossChainTransferSentStatusByTxHash(txHash string) error
 	ChangeCrossChainTransferSuccessStatueByTxHash(txHash string) error
 	UpdateCrossChainTransferTransactionHash(CrossChainTransfer) error
 }
@@ -91,7 +91,7 @@ func (c *crossChainTransferDB) CrossChainTransferBySourceHash(sourceHash string)
 	return &crossChainTransfer, nil
 }
 
-func (c *crossChainTransferDB) ChangeCrossChainTransferSentStatueByTxHash(txHash string) error {
+func (c *crossChainTransferDB) ChangeCrossChainTransferSentStatusByTxHash(txHash string) error {
 	var crossChainTransfer CrossChainTransfer
 	result := c.gorm.Table("cross_chain_transfer").Where("tx_hash = ?", txHash).Take(&crossChainTransfer)
 	if result.Error != nil {

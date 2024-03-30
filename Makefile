@@ -13,7 +13,9 @@ BINARY_NAME=selaginella
 
 L1POOL_ABI_ARTIFACT := bindings/abi/L1PoolManager.json
 L2POOL_ABI_ARTIFACT := bindings/abi/L2PoolManager.json
-STRATEGYBASE_ABI_ARTIFACT := bindings/abi/strategyBase.json
+STRATEGYBASE_ABI_ARTIFACT := bindings/abi/StrategyBase.json
+STRATEGYMANAGER_ABI_ARTIFACT := bindings/abi/StrategyManager.json
+STAKINGMANAGER_ABI_ARTIFACT := bindings/abi/StakingManager.json
 
 all: test build
 
@@ -65,7 +67,23 @@ binding-l2p:
 
 	rm $(temp)
 
-binding-sB:
+binding-strategyM:
+	$(eval temp := $(shell mktemp))
+
+	cat $(STRATEGYMANAGER_ABI_ARTIFACT) \
+	| jq -r .bytecode.object > $(temp)
+
+	cat $(STRATEGYMANAGER_ABI_ARTIFACT) \
+	| jq .abi \
+	| abigen --pkg bindings \
+	--abi - \
+	--out bindings/bvm_strategy_manager.go \
+	--type StrategyManager \
+	--bin $(temp)
+
+	rm $(temp)
+
+binding-strategyB:
 	$(eval temp := $(shell mktemp))
 
 	cat $(STRATEGYBASE_ABI_ARTIFACT) \
@@ -81,5 +99,21 @@ binding-sB:
 
 	rm $(temp)
 
-.PHONY: all build test clean run deps binding-l1p binding-l2p binding-sB
+binding-stakingM:
+	$(eval temp := $(shell mktemp))
+
+	cat $(STAKINGMANAGER_ABI_ARTIFACT) \
+	| jq -r .bytecode.object > $(temp)
+
+	cat $(STAKINGMANAGER_ABI_ARTIFACT) \
+	| jq .abi \
+	| abigen --pkg bindings \
+	--abi - \
+	--out bindings/bvm_staking_manager.go \
+	--type StakingManager \
+	--bin $(temp)
+
+	rm $(temp)
+
+.PHONY: all build test clean run deps binding-l1p binding-l2p binding-strategyM binding-strategyB binding-stakingM
 

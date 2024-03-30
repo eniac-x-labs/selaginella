@@ -35,7 +35,7 @@ type UpdateWithdrawFundingPoolBalanceDB interface {
 	StoreBatchUpdateFundingPoolBalance([]UpdateWithdrawFundingPoolBalance) error
 	BuildUpdateFundingPoolBalance(in *pb.UpdateWithdrawFundingPoolBalanceRequest, sourceHash common.Hash) UpdateWithdrawFundingPoolBalance
 	UpdateFundingPoolBalanceBySourceHash(sourceHash string) (*UpdateWithdrawFundingPoolBalance, error)
-	ChangeUpdateFundingPoolBalanceSentStatueByTxHash(txHash string) error
+	ChangeUpdateFundingPoolBalanceSentStatusByTxHash(txHash string) error
 	UpdateFundingPoolBalanceTransactionHash(UpdateWithdrawFundingPoolBalance) error
 }
 
@@ -106,7 +106,7 @@ func (u *updateWithdrawFundingPoolBalanceDB) UpdateFundingPoolBalanceBySourceHas
 	return &updateFundingPoolBalance, nil
 }
 
-func (u *updateWithdrawFundingPoolBalanceDB) ChangeUpdateFundingPoolBalanceSentStatueByTxHash(txHash string) error {
+func (u *updateWithdrawFundingPoolBalanceDB) ChangeUpdateFundingPoolBalanceSentStatusByTxHash(txHash string) error {
 	var updateFundingPoolBalance UpdateWithdrawFundingPoolBalance
 	result := u.gorm.Table("update_withdraw_funding_pool_balance").Where("tx_hash = ?", txHash).Take(&updateFundingPoolBalance)
 	if result.Error != nil {
