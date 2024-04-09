@@ -142,3 +142,22 @@ func bindStrategyManager(StrategyManagerAddress string, l2Client *ethclient.Clie
 
 	return strategyManagerContract, rawStrategyManagerContract, nil
 }
+
+func bindDETH(DETHAddress string, l1Client *ethclient.Client) (*bindings.DETH, *bind.BoundContract, error) {
+	dETHParsed, err := abi.JSON(strings.NewReader(
+		bindings.DETHABI,
+	))
+	if err != nil {
+		log.Error("selaginella parse deth contract abi fail", "err", err)
+		return nil, nil, err
+	}
+
+	rawDETHContract := bind.NewBoundContract(
+		common.HexToAddress(DETHAddress), dETHParsed, l1Client, l1Client,
+		l1Client,
+	)
+
+	dETHContract, err := bindings.NewDETH(common.HexToAddress(DETHAddress), l1Client)
+
+	return dETHContract, rawDETHContract, nil
+}

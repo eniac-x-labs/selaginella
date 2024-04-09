@@ -109,7 +109,7 @@ func runGrpcServer(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.L
 		return nil, err
 	}
 
-	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, cfg.ChainId, cfg.L1StakingManagerAddr, shutdown)
+	return services.NewRpcServer(ctx.Context, db, grpcServerCfg, hsmCfg, cfg.RPCs, priKey, cfg.ChainId, cfg.L1StakingManagerAddr, cfg.L1DETHAddr, shutdown)
 }
 
 func runMigrations(ctx *cli.Context) error {
