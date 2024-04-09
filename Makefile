@@ -16,6 +16,7 @@ L2POOL_ABI_ARTIFACT := bindings/abi/L2PoolManager.json
 STRATEGYBASE_ABI_ARTIFACT := bindings/abi/StrategyBase.json
 STRATEGYMANAGER_ABI_ARTIFACT := bindings/abi/StrategyManager.json
 STAKINGMANAGER_ABI_ARTIFACT := bindings/abi/StakingManager.json
+DETH_ABI_ARTIFACT := bindings/abi/DETH.json
 
 all: test build
 
@@ -115,5 +116,21 @@ binding-stakingM:
 
 	rm $(temp)
 
-.PHONY: all build test clean run deps binding-l1p binding-l2p binding-strategyM binding-strategyB binding-stakingM
+binding-dETH:
+	$(eval temp := $(shell mktemp))
+
+	cat $(DETH_ABI_ARTIFACT) \
+	| jq -r .bytecode.object > $(temp)
+
+	cat $(DETH_ABI_ARTIFACT) \
+	| jq .abi \
+	| abigen --pkg bindings \
+	--abi - \
+	--out bindings/bvm_deth.go \
+	--type DETH \
+	--bin $(temp)
+
+	rm $(temp)
+
+.PHONY: all build test clean run deps binding-l1p binding-l2p binding-strategyM binding-strategyB binding-stakingM binding-dETH
 

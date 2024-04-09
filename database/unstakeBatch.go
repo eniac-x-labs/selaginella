@@ -34,13 +34,13 @@ type UnstakeBatchDB interface {
 	UnstakeBatchView
 	StoreUnstakeBatch([]UnstakeBatch) error
 	BuildUnstakeBatch(in *pb.UnstakeBatchRequest, sourceHash common.Hash) UnstakeBatch
-	UnstakeBatchBySourceHash(sourceHash string) (*UnstakeBatch, error)
 	ChangeUnstakeBatchSentStatusByTxHash(txHash string) error
 	UpdateUnstakeBatchTransactionHash(UnstakeBatch) error
 }
 
 type UnstakeBatchView interface {
 	UnstakeBatchByTxHash(txHash string) (*UnstakeBatch, error)
+	UnstakeBatchBySourceHash(sourceHash string) (*UnstakeBatch, error)
 	OldestPendingSentTransaction() (*UnstakeBatch, error)
 	OldestPendingNoSentTransaction() (*UnstakeBatch, error)
 }

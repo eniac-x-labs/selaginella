@@ -67,6 +67,8 @@ type RpcServer struct {
 	l1StakingManagerAddr        common.Address
 	l1StakingManagerContract    *bindings.StakingManager
 	RawL1StakingManagerContract *bind.BoundContract
+	l1DETHContract              *bindings.DETH
+	RawL1DETHContract           *bind.BoundContract
 	StrategyManagerContract     map[uint64]*bindings.StrategyManager
 	RawStrategyManagerContract  map[uint64]*bind.BoundContract
 	EthAddress                  map[uint64]common.Address
@@ -99,7 +101,7 @@ func (s *RpcServer) Stopped() bool {
 	return s.stopped.Load()
 }
 
-func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, chainIds config.ChainId, l1StakingManagerAddr string, shutdown context.CancelCauseFunc) (*RpcServer, error) {
+func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, chainIds config.ChainId, l1StakingManagerAddr string, l1DETHAddr string, shutdown context.CancelCauseFunc) (*RpcServer, error) {
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
@@ -123,6 +125,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	var l1PoolContractAddr common.Address
 	var l1StakingManagerContract *bindings.StakingManager
 	var rawL1StakingManagerContract *bind.BoundContract
+	var l1DETHContract *bindings.DETH
+	var rawL1DETHManagerContract *bind.BoundContract
 
 	for i := range chainRpcCfg {
 		if chainRpcCfg[i].ChainId == chainIds.L1ChainId {
@@ -142,6 +146,11 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 
 			l1PoolContractAddr = common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress)
 			l1StakingManagerContract, rawL1StakingManagerContract, err = bindL1StakingManager(l1StakingManagerAddr, l1Client)
+			if err != nil {
+				return nil, err
+			}
+
+			l1DETHContract, rawL1DETHManagerContract, err = bindDETH(l1DETHAddr, l1Client)
 			if err != nil {
 				return nil, err
 			}
@@ -199,6 +208,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		RawL1StakingManagerContract: rawL1StakingManagerContract,
 		StrategyManagerContract:     strategyManagerContracts,
 		RawStrategyManagerContract:  rawStrategyManagerContracts,
+		l1DETHContract:              l1DETHContract,
+		RawL1DETHContract:           rawL1DETHManagerContract,
 		EthAddress:                  EthAddress,
 		WEthAddress:                 WEthAddress,
 		USDTAddress:                 USDTAddress,
@@ -298,6 +309,17 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
+	CBMTicker := time.NewTicker(10 * time.Second)
+	s.tasks.Go(func() error {
+		for range CBMTicker.C {
+			err := s.ChangeBatchMintTransactionStatus()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
 	SBTTicker := time.NewTicker(3 * time.Second)
 	s.tasks.Go(func() error {
 		for range SBTTicker.C {
@@ -346,6 +368,17 @@ func (s *RpcServer) Start(ctx context.Context) error {
 	s.tasks.Go(func() error {
 		for range SUSTicker.C {
 			err := s.SendUnstakeSingleTransaction()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
+	SBMTicker := time.NewTicker(3 * time.Second)
+	s.tasks.Go(func() error {
+		for range SBMTicker.C {
+			err := s.SendBatchMintTransaction()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -613,7 +646,47 @@ func (s *RpcServer) UnstakeSingle(ctx context.Context, in *pb.UnstakeSingleReque
 
 	return &pb.UnstakeSingleResponse{
 		Success: true,
-		Message: "call migrate related l1 staker shares success",
+		Message: "call unstake single success",
+	}, nil
+}
+
+func (s *RpcServer) BatchMint(ctx context.Context, in *pb.BatchMintRequest) (*pb.BatchMintResponse, error) {
+	if in == nil {
+		log.Warn("invalid request: request body is empty")
+		return nil, errors.New("invalid request: request body is empty")
+	}
+
+	var batchMints []database.BatchMint
+
+	uSSH, _ := s.db.BatchMint.BatchMintByBatch(in.Batch)
+	if uSSH != nil {
+		log.Error("cannot be called repeatedly!")
+		return nil, errors.New("cannot be called repeatedly")
+	}
+
+	batchMints = s.db.BatchMint.BuildBatchMint(in)
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if len(batchMints) > 0 {
+				if err := s.db.BatchMint.StoreBatchMint(batchMints); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return &pb.BatchMintResponse{
+		Success: true,
+		Message: "call batch mint success",
 	}, nil
 }
 
@@ -1050,6 +1123,8 @@ func (s *RpcServer) SendBridgeTransaction() error {
 		}
 	}
 
+	log.Info("send bridge transaction success", "tx_hash", finalTx.Hash())
+
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
 		if err := s.db.Transaction(func(tx *database.DB) error {
@@ -1341,6 +1416,81 @@ func (s *RpcServer) SendUnstakeSingleTransaction() error {
 	return nil
 }
 
+func (s *RpcServer) SendBatchMintTransaction() error {
+
+	var tOpts *bind.TransactOpts
+	var err error
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var ctx = context.Background()
+	var nilBatchMint database.BatchMint
+	var Batcher []bindings.IDETHBatchMint
+
+	batchMintTx, _ := s.db.BatchMint.OldestPendingNoSentTransaction()
+	if *batchMintTx == nilBatchMint {
+		log.Warn("no more batch mint tx need to be sent")
+		return nil
+	}
+
+	tOpts, err = s.newTransactOpts(ctx, s.l1ChainID)
+	if err != nil {
+		log.Error("get transactOpts failed", "err", err)
+		return err
+	}
+
+	batchMints, err := s.db.BatchMint.BatchMintsByBatch(batchMintTx.Batch.Uint64())
+	if err != nil {
+		log.Error("get batch mints failed", "err", err)
+		return err
+	}
+	for _, v := range batchMints {
+		mint := bindings.IDETHBatchMint{
+			Staker: v.StakerAddress,
+			Amount: v.SharesAmount,
+		}
+		Batcher = append(Batcher, mint)
+	}
+
+	tx, err = s.l1DETHContract.BatchMint(tOpts, Batcher)
+
+	finalTx, err = s.RawL1DETHContract.RawTransact(tOpts, tx.Data())
+	if err != nil {
+		log.Error("raw send batch mint transaction fail", "error", err)
+		return err
+	}
+	err = s.ethClients[s.l1ChainID].SendTransaction(ctx, finalTx)
+	if err != nil {
+		log.Error("send batch mint transaction fail", "error", err)
+		return err
+	}
+
+	log.Info("send batch mint transaction success", "tx_hash", finalTx.Hash())
+
+	for _, v := range batchMints {
+		v.TxHash = finalTx.Hash()
+	}
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if batchMints != nil {
+				if err := s.db.BatchMint.UpdateBatchMintTransactionHash(batchMints); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *RpcServer) ChangeBridgeTransactionStatus() error {
 	var receipt *types.Receipt
 
@@ -1492,6 +1642,37 @@ func (s *RpcServer) ChangeUnstakeSingleTransactionStatus() error {
 	}
 
 	log.Info("change strategy manager claim unstake single request transaction status success", "txHash", receipt.TxHash)
+
+	return nil
+}
+
+func (s *RpcServer) ChangeBatchMintTransactionStatus() error {
+	var receipt *types.Receipt
+
+	tx, err := s.db.BatchMint.OldestPendingSentTransaction()
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error("get oldest pending transaction fail", "err", err)
+		return err
+	}
+
+	if tx.Batch != nil {
+		receipt, err = s.ethClients[s.l1ChainID].TxReceiptDetailByHash(tx.TxHash)
+		if errors.Is(err, ethereum.NotFound) {
+			log.Warn("transaction not found")
+			return nil
+		}
+	} else {
+		log.Info("no more batch mint pending transaction !")
+		return nil
+	}
+
+	err = s.db.BatchMint.ChangeBatchMintSentStatusByTxHash(receipt.TxHash.String())
+	if err != nil {
+		log.Error("change batch mintt transaction status fail", "err", err)
+		return err
+	}
+
+	log.Info("change batch mint transaction status success", "txHash", receipt.TxHash)
 
 	return nil
 }

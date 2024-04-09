@@ -98,3 +98,16 @@ CREATE TABLE IF NOT EXISTS unstake_single (
 CREATE INDEX IF NOT EXISTS unstake_single_timestamp ON unstake_single(timestamp);
 CREATE INDEX IF NOT EXISTS unstake_single_tx_hash ON unstake_single(tx_hash);
 CREATE INDEX IF NOT EXISTS unstake_single_source_hash ON unstake_single(source_hash);
+
+CREATE TABLE IF NOT EXISTS batch_mint (
+     guid                  VARCHAR PRIMARY KEY,
+     staker_address        VARCHAR NOT NULL,
+     shares_amount         UINT256 NOT NULL,
+     batch                 UINT256 NOT NULL,
+     tx_hash               VARCHAR NOT NULL,
+     status                SMALLINT DEFAULT 0,
+     timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
+);
+CREATE INDEX IF NOT EXISTS batch_mint_timestamp ON batch_mint(timestamp);
+CREATE INDEX IF NOT EXISTS batch_mint_tx_hash ON batch_mint(tx_hash);
+CREATE INDEX IF NOT EXISTS batch_mint_batch ON batch_mint(batch);

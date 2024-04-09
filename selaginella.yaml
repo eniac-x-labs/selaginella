@@ -39,20 +39,20 @@ rpcs:
     strategy_manager: ''
 
 
-  - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
-    chain_id: 1442
-    founding_pool_address: '0x54FC63B55b18697820601206a6C0AE0e671d63Fd'
-    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
-    weth_address: '0x2ad78787CCaf7FA8FAe8953FD78ab9163f81DcC8'
-    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
-    okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
-    mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
-    strategy_manager: ''
+#  - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
+#    chain_id: 1442
+#    founding_pool_address: '0x54FC63B55b18697820601206a6C0AE0e671d63Fd'
+#    eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+#    weth_address: '0x2ad78787CCaf7FA8FAe8953FD78ab9163f81DcC8'
+#    usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+#    usdc_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+#    dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+#    okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
+#    mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
+#    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
+#    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
+#    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+#    strategy_manager: ''
 
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
@@ -178,6 +178,7 @@ exporter:
   exporter_address: "0.0.0.0:8081"
 
 l1_staking_manager_addr: "0x70144Fd68E82E4286646b9740182551a453cc25b"
+l1_deth_addr: "0x9a88D56c8354838aC6564113201D07aD44b0cd89"
 
 chain_id:
   l1_chain_id: 11155111
