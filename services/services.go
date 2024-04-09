@@ -658,8 +658,8 @@ func (s *RpcServer) BatchMint(ctx context.Context, in *pb.BatchMintRequest) (*pb
 
 	var batchMints []database.BatchMint
 
-	uSSH, _ := s.db.BatchMint.BatchMintByBatch(in.Batch)
-	if uSSH != nil {
+	bMBB, _ := s.db.BatchMint.BatchMintByBatch(in.Batch)
+	if bMBB != nil {
 		log.Error("cannot be called repeatedly!")
 		return nil, errors.New("cannot be called repeatedly")
 	}
@@ -1668,7 +1668,7 @@ func (s *RpcServer) ChangeBatchMintTransactionStatus() error {
 
 	err = s.db.BatchMint.ChangeBatchMintSentStatusByTxHash(receipt.TxHash.String())
 	if err != nil {
-		log.Error("change batch mintt transaction status fail", "err", err)
+		log.Error("change batch mint transaction status fail", "err", err)
 		return err
 	}
 

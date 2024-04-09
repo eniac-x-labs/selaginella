@@ -64,10 +64,10 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x1A2cbbcd58B235C58bD90fD05F5C30BCc1abDbAA'
-    gaming_strategy_address: '0x7cc3Bde56E1EAb98e4229e90C412a2DfDc54bb83'
-    social_strategy_address: '0x3C1eA28E80A6885f16bcBb26CbC4063656E174df'
-    strategy_manager: '0x5E32F34a5A9bafaeA2252501D2e59499B47E6e0c'
+    da_strategy_address: '0x6b0E1f7efa571e9F536f1a45c31CD5AD1C47fffA'
+    gaming_strategy_address: '0x589E25f4120a4D6b6014881BD5B2A303b5B2cff9'
+    social_strategy_address: '0x43C455F72c92a5193b99191De9B14B2aC531cC54'
+    strategy_manager: '0xF14c1d93CdFB75ac4c741a65d3F148C84886d78c'
 
 
   - rpc_url: 'https://base-sepolia.g.alchemy.com/v2/XBMhzm0JcYtvq35NAbDOxEVI3NzqgAb3'
@@ -176,7 +176,7 @@ database:
 exporter:
   exporter_address: "0.0.0.0:8081"
 
-l1_staking_manager_addr: "0x70144Fd68E82E4286646b9740182551a453cc25b"
+l1_staking_manager_addr: "0x9f1D46CF8081Cc21AF2e030FE3F6EeDCa7BFedB2"
 l1_deth_addr: "0x9a88D56c8354838aC6564113201D07aD44b0cd89"
 
 chain_id:
