@@ -38,7 +38,6 @@ rpcs:
     social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
     strategy_manager: ''
 
-
 #  - rpc_url: 'https://polygonzkevm-testnet.g.alchemy.com/v2/dmeCZ-Yf1YjIrgExOXbfrTF_Z_51GyBx'
 #    chain_id: 1442
 #    founding_pool_address: '0x54FC63B55b18697820601206a6C0AE0e671d63Fd'
@@ -53,7 +52,6 @@ rpcs:
 #    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
 #    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
 #    strategy_manager: ''
-
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
