@@ -1467,6 +1467,10 @@ func (s *RpcServer) SendBatchMintTransaction() error {
 	}
 
 	tx, err = s.l1DETHContract.BatchMint(tOpts, Batcher)
+	if err != nil {
+		log.Error("get batch mint transaction abi fail", "error", err)
+		return err
+	}
 
 	finalTx, err = s.RawL1DETHContract.RawTransact(tOpts, tx.Data())
 	if err != nil {
