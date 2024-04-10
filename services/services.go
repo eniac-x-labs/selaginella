@@ -429,6 +429,13 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
+	if in.SourceChainId == "1442" || in.DestChainId == "1442" || in.SourceChainId == "11155111" || in.DestChainId == "11155111" {
+		return &pb.CrossChainTransferResponse{
+			Success: true,
+			Message: "call cross chain transfer success",
+		}, nil
+	}
+
 	var crossChainTransfers []database.CrossChainTransfer
 
 	cCF, _ := s.db.CrossChainTransfer.CrossChainTransferBySourceHash(in.SourceHash)
@@ -469,12 +476,6 @@ func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainT
 	if in == nil {
 		log.Warn("invalid request: request body is empty")
 		return nil, errors.New("invalid request: request body is empty")
-	}
-	if in.SourceChainId == "1442" || in.DestChainId == "1442" || in.SourceChainId == "11155111" || in.DestChainId == "11155111" {
-		return &pb.CrossChainTransferStatusResponse{
-			Success: true,
-			Message: "call cross chain transfer success",
-		}, nil
 	}
 
 	err := s.db.CrossChainTransfer.ChangeCrossChainTransferSuccessStatueByTxHash(in.TxHash)
