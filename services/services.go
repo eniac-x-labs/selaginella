@@ -321,7 +321,7 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
-	SBTTicker := time.NewTicker(3 * time.Second)
+	SBTTicker := time.NewTicker(5 * time.Second)
 	s.tasks.Go(func() error {
 		for range SBTTicker.C {
 			err := s.SendBridgeTransaction()
@@ -699,52 +699,47 @@ func (s *RpcServer) SendBridgeTransaction() error {
 		return nil
 	}
 
-	var wg sync.WaitGroup
+	var ctx context.Context
 	for _, bridgeTx := range bridgeTxs {
-		wg.Add(1)
-		go func(bridgeTx database.CrossChainTransfer) {
-			defer wg.Done()
-			if bridgeTx.SourceChainId.Uint64() == 1442 || bridgeTx.DestChainId.Uint64() == 1442 {
-				return
-			}
-			bridge, err := s.bridgeLogic(&bridgeTx)
-			if err != nil {
-				return
-			}
+		if bridgeTx.SourceChainId.Uint64() == 1442 || bridgeTx.DestChainId.Uint64() == 1442 {
+			return nil
+		}
+		bridge, err := s.bridgeLogic(ctx, &bridgeTx)
+		if err != nil {
+			return err
+		}
 
-			retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
-			if _, err := retry.Do[interface{}](context.Background(), 10, retryStrategy, func() (interface{}, error) {
-				if err := s.db.Transaction(func(tx *database.DB) error {
-					if bridge != nil {
-						if err := s.db.CrossChainTransfer.UpdateCrossChainTransferTransactionHash(*bridge); err != nil {
-							return err
-						}
+		retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+		if _, err := retry.Do[interface{}](context.Background(), 10, retryStrategy, func() (interface{}, error) {
+			if err := s.db.Transaction(func(tx *database.DB) error {
+				if bridge != nil {
+					if err := s.db.CrossChainTransfer.UpdateCrossChainTransferTransactionHash(*bridge); err != nil {
+						return err
 					}
-					return nil
-				}); err != nil {
-					log.Error("unable to persist batch", "err", err)
-					return nil, fmt.Errorf("unable to persist batch: %w", err)
 				}
-				return nil, nil
+				return nil
 			}); err != nil {
-				return
+				log.Error("unable to persist batch", "err", err)
+				return nil, fmt.Errorf("unable to persist batch: %w", err)
 			}
+			return nil, nil
+		}); err != nil {
+			return err
+		}
 
-			log.Info("send bridge transaction success", "tx_hash", bridge.TxHash)
-		}(bridgeTx)
+		log.Info("send bridge transaction success", "tx_hash", bridge.TxHash)
+
 	}
-	wg.Wait()
 
 	return nil
 }
 
-func (s *RpcServer) bridgeLogic(bridgeTx *database.CrossChainTransfer) (*database.CrossChainTransfer, error) {
+func (s *RpcServer) bridgeLogic(ctx context.Context, bridgeTx *database.CrossChainTransfer) (*database.CrossChainTransfer, error) {
 
 	var opts *bind.TransactOpts
 	var err error
 	var tx *types.Transaction
 	var finalTx *types.Transaction
-	var ctx = context.Background()
 
 	for chainId, client := range s.ethClients {
 		if chainId == bridgeTx.DestChainId.Uint64() {
@@ -1530,16 +1525,15 @@ func (s *RpcServer) ChangeBridgeTransactionStatus() error {
 		go func(tx database.CrossChainTransfer) {
 			defer wg.Done()
 			if tx.DestChainId != nil {
-				receipt, err = s.ethClients[tx.DestChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
-				if errors.Is(err, ethereum.NotFound) {
-					log.Warn("transaction not found")
+				receipt, err = getTransactionReceipt(s.ethClients[tx.DestChainId.Uint64()], tx.TxHash)
+				if err != nil {
 					return
 				}
-			}
-			err = s.db.CrossChainTransfer.ChangeCrossChainTransferSentStatusByTxHash(receipt.TxHash.String())
-			if err != nil {
-				log.Error("change transaction status fail", "err", err)
-				return
+				err = s.db.CrossChainTransfer.ChangeCrossChainTransferSentStatusByTxHash(receipt.TxHash.String())
+				if err != nil {
+					log.Error("change transaction status fail", "err", err)
+					return
+				}
 			}
 
 			log.Info("change bridge transaction status success", "txHash", receipt.TxHash)
@@ -1816,7 +1810,7 @@ func (s *RpcServer) CompletePoolAndNew() error {
 			log.Error("send complete pool and new transaction fail", "error", err)
 			return err
 		}
-		receipt, err = getTransactionReceipt(s.ethClients[s.l1ChainID], *finalTx)
+		receipt, err = getTransactionReceipt(s.ethClients[s.l1ChainID], finalTx.Hash())
 		if err != nil {
 			log.Error("get complete pool and new receipt fail", "error", err)
 			return err
@@ -1829,14 +1823,14 @@ func (s *RpcServer) CompletePoolAndNew() error {
 	return nil
 }
 
-func getTransactionReceipt(client node.EthClient, tx types.Transaction) (*types.Receipt, error) {
+func getTransactionReceipt(client node.EthClient, txHash common.Hash) (*types.Receipt, error) {
 	var receipt *types.Receipt
 	var err error
 
 	ticker := time.NewTicker(30 * time.Second)
 	for {
 		<-ticker.C
-		receipt, err = client.TxReceiptDetailByHash(tx.Hash())
+		receipt, err = client.TxReceiptDetailByHash(txHash)
 		if err != nil && !errors.Is(err, ethereum.NotFound) {
 			log.Error("get transaction by hash fail", "error", err)
 			return nil, err
@@ -1939,7 +1933,7 @@ func (s *RpcServer) DaStrategyETHToL2DappLinkBridge(chainID uint64) error {
 			log.Error("send da transfer eth to l2 dapp-link bridge transaction fail", "error", err)
 			return err
 		}
-		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], finalTx.Hash())
 		if err != nil {
 			log.Error("get da transfer eth to l2 dapp-link bridge receipt fail", "error", err)
 			return err
@@ -1992,7 +1986,7 @@ func (s *RpcServer) GamingStrategyETHToL2DappLinkBridge(chainID uint64) error {
 			log.Error("send gaming transfer eth to l2 dapp-link bridge transaction fail", "error", err)
 			return err
 		}
-		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], finalTx.Hash())
 		if err != nil {
 			log.Error("get gaming transfer eth to l2 dapp-link bridge receipt fail", "error", err)
 			return err
@@ -2045,7 +2039,7 @@ func (s *RpcServer) SocialStrategyETHToL2DappLinkBridge(chainID uint64) error {
 			log.Error("send social transfer eth to l2 dapp-link bridge transaction fail", "error", err)
 			return err
 		}
-		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], finalTx.Hash())
 		if err != nil {
 			log.Error("get social transfer eth to l2 dapp-link bridge receipt fail", "error", err)
 			return err
@@ -2098,7 +2092,7 @@ func (s *RpcServer) DaStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 			log.Error("send da transfer weth to l2 dapp-link bridge transaction fail", "error", err)
 			return err
 		}
-		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], finalTx.Hash())
 		if err != nil {
 			log.Error("get da transfer weth to l2 dapp-link bridge receipt fail", "error", err)
 			return err
@@ -2151,7 +2145,7 @@ func (s *RpcServer) GamingStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 			log.Error("send gaming transfer weth to l2 dapp-link bridge transaction fail", "error", err)
 			return err
 		}
-		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], finalTx.Hash())
 		if err != nil {
 			log.Error("get gaming transfer weth to l2 dapp-link bridge receipt fail", "error", err)
 			return err
@@ -2204,7 +2198,7 @@ func (s *RpcServer) SocialStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 			log.Error("send social transfer weth to l2 dapp-link bridge transaction fail", "error", err)
 			return err
 		}
-		receipt, err = getTransactionReceipt(s.ethClients[chainID], *finalTx)
+		receipt, err = getTransactionReceipt(s.ethClients[chainID], finalTx.Hash())
 		if err != nil {
 			log.Error("get social transfer weth to l2 dapp-link bridge receipt fail", "error", err)
 			return err
