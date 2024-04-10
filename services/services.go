@@ -699,7 +699,7 @@ func (s *RpcServer) SendBridgeTransaction() error {
 		return nil
 	}
 
-	var ctx context.Context
+	ctx := context.Background()
 	for _, bridgeTx := range bridgeTxs {
 		if bridgeTx.SourceChainId.Uint64() == 1442 || bridgeTx.DestChainId.Uint64() == 1442 {
 			return nil
