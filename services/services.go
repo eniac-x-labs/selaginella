@@ -1888,6 +1888,7 @@ func (s *RpcServer) metricOpStrategyBalance() error {
 	if err := s.SocialStrategyETHToL2DappLinkBridge(s.opChainId); err != nil {
 		return err
 	}
+	log.Info("metric op strategy eth balance success")
 	return nil
 }
 
@@ -1915,7 +1916,10 @@ func (s *RpcServer) DaStrategyETHToL2DappLinkBridge(chainID uint64) error {
 		log.Error("get da strategy eth balance fail", "err", err)
 		return err
 	}
-	if ethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+
+	ETH32, _ := new(big.Int).SetString("32000000000000000000", 10)
+	if ethBalance.Cmp(ETH32) > -1 {
+		log.Info("da strategy transfer eth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
 		tx, err = s.DAStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
@@ -1968,7 +1972,10 @@ func (s *RpcServer) GamingStrategyETHToL2DappLinkBridge(chainID uint64) error {
 		log.Error("get gaming strategy eth balance fail", "err", err)
 		return err
 	}
-	if ethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+
+	ETH32, _ := new(big.Int).SetString("32000000000000000000", 10)
+	if ethBalance.Cmp(ETH32) > -1 {
+		log.Info("gaming strategy transfer eth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
 		tx, err = s.GamingStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
@@ -2021,7 +2028,10 @@ func (s *RpcServer) SocialStrategyETHToL2DappLinkBridge(chainID uint64) error {
 		log.Error("get social strategy eth balance fail", "err", err)
 		return err
 	}
-	if ethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+
+	ETH32, _ := new(big.Int).SetString("32000000000000000000", 10)
+	if ethBalance.Cmp(ETH32) > -1 {
+		log.Info("social strategy transfer eth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
 		tx, err = s.SocialStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
@@ -2074,7 +2084,10 @@ func (s *RpcServer) DaStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 		log.Error("get da strategy weth balance fail", "err", err)
 		return err
 	}
-	if wethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+
+	WETH32, _ := new(big.Int).SetString("32000000000000000000", 10)
+	if wethBalance.Cmp(WETH32) > -1 {
+		log.Info("da strategy transfer weth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
 		tx, err = s.DAStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
@@ -2127,7 +2140,10 @@ func (s *RpcServer) GamingStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 		log.Error("get gaming strategy weth balance fail", "err", err)
 		return err
 	}
-	if wethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+
+	WETH32, _ := new(big.Int).SetString("32000000000000000000", 10)
+	if wethBalance.Cmp(WETH32) > -1 {
+		log.Info("gaming strategy transfer weth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
 		tx, err = s.GamingStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
@@ -2180,7 +2196,10 @@ func (s *RpcServer) SocialStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 		log.Error("get social strategy weth balance fail", "err", err)
 		return err
 	}
-	if wethBalance.Cmp(new(big.Int).SetUint64(32)) > -1 {
+
+	WETH32, _ := new(big.Int).SetString("32000000000000000000", 10)
+	if wethBalance.Cmp(WETH32) > -1 {
+		log.Info("social strategy transfer weth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
 		tx, err = s.SocialStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
