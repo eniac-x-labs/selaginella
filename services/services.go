@@ -470,6 +470,12 @@ func (s *RpcServer) ChangeTransferStatus(ctx context.Context, in *pb.CrossChainT
 		log.Warn("invalid request: request body is empty")
 		return nil, errors.New("invalid request: request body is empty")
 	}
+	if in.SourceChainId == "1442" || in.DestChainId == "1442" || in.SourceChainId == "11155111" || in.DestChainId == "11155111" {
+		return &pb.CrossChainTransferStatusResponse{
+			Success: true,
+			Message: "call cross chain transfer success",
+		}, nil
+	}
 
 	err := s.db.CrossChainTransfer.ChangeCrossChainTransferSuccessStatueByTxHash(in.TxHash)
 	if err != nil {
@@ -701,9 +707,6 @@ func (s *RpcServer) SendBridgeTransaction() error {
 
 	ctx := context.Background()
 	for _, bridgeTx := range bridgeTxs {
-		if bridgeTx.SourceChainId.Uint64() == 1442 || bridgeTx.DestChainId.Uint64() == 1442 {
-			return nil
-		}
 		bridge, err := s.bridgeLogic(ctx, &bridgeTx)
 		if err != nil {
 			return err
@@ -1485,8 +1488,8 @@ func (s *RpcServer) SendBatchMintTransaction() error {
 
 	log.Info("send batch mint transaction success", "tx_hash", finalTx.Hash())
 
-	for _, v := range batchMints {
-		v.TxHash = finalTx.Hash()
+	for k := range batchMints {
+		batchMints[k].TxHash = finalTx.Hash()
 	}
 
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
