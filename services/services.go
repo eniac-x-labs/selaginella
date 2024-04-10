@@ -169,8 +169,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			l2BridgeContracts[chainRpcCfg[i].ChainId], rawL2BridgeContracts[chainRpcCfg[i].ChainId], err = bindL2PoolManager(chainRpcCfg[i].FoundingPoolAddress, l2Client)
 
 			daStrategyContracts[chainRpcCfg[i].ChainId], rawDaStrategyContracts[chainRpcCfg[i].ChainId], err = bindDaStrategyBase(chainRpcCfg[i].DaStrategyAddress, l2Client)
-			gamingStrategyContracts[chainRpcCfg[i].ChainId], rawGamingStrategyContracts[chainRpcCfg[i].ChainId], err = bindGamingStrategyBase(chainRpcCfg[i].DaStrategyAddress, l2Client)
-			socialStrategyContracts[chainRpcCfg[i].ChainId], rawSocialStrategyContracts[chainRpcCfg[i].ChainId], err = bindSocialStrategyBase(chainRpcCfg[i].DaStrategyAddress, l2Client)
+			gamingStrategyContracts[chainRpcCfg[i].ChainId], rawGamingStrategyContracts[chainRpcCfg[i].ChainId], err = bindGamingStrategyBase(chainRpcCfg[i].GamingStrategyAddress, l2Client)
+			socialStrategyContracts[chainRpcCfg[i].ChainId], rawSocialStrategyContracts[chainRpcCfg[i].ChainId], err = bindSocialStrategyBase(chainRpcCfg[i].SocialStrategyAddress, l2Client)
 
 			strategyManagerContracts[chainRpcCfg[i].ChainId], rawStrategyManagerContracts[chainRpcCfg[i].ChainId], err = bindStrategyManager(chainRpcCfg[i].StrategyManager, l2Client)
 
