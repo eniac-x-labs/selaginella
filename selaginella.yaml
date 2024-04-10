@@ -167,10 +167,10 @@ rpcs:
 
 
 database:
-  db_host: "postgresql"
+  db_host: "127.0.0.1"
   db_port: 5432
   db_user: "postgres"
-  db_password: "vVb9NhLYui"
+  db_password: ""
   db_name: "selaginella"
 
 exporter:
