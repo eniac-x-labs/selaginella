@@ -57,7 +57,7 @@ type RpcServer struct {
 	RawL1BridgeContract         *bind.BoundContract
 	RawL2BridgeContract         map[uint64]*bind.BoundContract
 	L1BridgeContract            *bindings.L1PoolManager
-	L1BridgeContractAddress     common.Address
+	BridgeContractAddress       map[uint64]common.Address
 	L2BridgeContract            map[uint64]*bindings.L2PoolManager
 	DAStrategyContract          map[uint64]*bindings.StrategyBase
 	RawDAStrategyContract       map[uint64]*bind.BoundContract
@@ -123,7 +123,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	socialStrategyContracts := make(map[uint64]*bindings.StrategyBase)
 	strategyManagerContracts := make(map[uint64]*bindings.StrategyManager)
 	rawStrategyManagerContracts := make(map[uint64]*bind.BoundContract)
-	var l1PoolContractAddr common.Address
+	PoolContractAddr := make(map[uint64]common.Address)
 	var l1StakingManagerContract *bindings.StakingManager
 	var rawL1StakingManagerContract *bind.BoundContract
 	var l1DETHContract *bindings.DETH
@@ -145,7 +145,6 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 				return nil, err
 			}
 
-			l1PoolContractAddr = common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress)
 			l1StakingManagerContract, rawL1StakingManagerContract, err = bindL1StakingManager(l1StakingManagerAddr, l1Client)
 			if err != nil {
 				return nil, err
@@ -186,6 +185,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		OKBAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].OKBAddress)
 		MNTAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].MNTAddress)
 
+		PoolContractAddr[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress)
 	}
 
 	return &RpcServer{
@@ -196,7 +196,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		RawL1BridgeContract:         rawL1BridgeContract,
 		RawL2BridgeContract:         rawL2BridgeContracts,
 		L1BridgeContract:            l1BridgeContract,
-		L1BridgeContractAddress:     l1PoolContractAddr,
+		BridgeContractAddress:       PoolContractAddr,
 		L2BridgeContract:            l2BridgeContracts,
 		DAStrategyContract:          daStrategyContracts,
 		GamingStrategyContract:      gamingStrategyContracts,
@@ -1930,7 +1930,7 @@ func (s *RpcServer) DaStrategyETHToL2DappLinkBridge(chainID uint64) error {
 		log.Info("da strategy transfer eth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
-		tx, err = s.DAStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
+		tx, err = s.DAStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.BridgeContractAddress[chainID], s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
 		if err != nil {
 			log.Error("transfer da eth to l2 dapp-link bridge by abi fail", "error", err)
 			return err
@@ -1986,7 +1986,7 @@ func (s *RpcServer) GamingStrategyETHToL2DappLinkBridge(chainID uint64) error {
 		log.Info("gaming strategy transfer eth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
-		tx, err = s.GamingStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
+		tx, err = s.GamingStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.BridgeContractAddress[chainID], s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
 		if err != nil {
 			log.Error("transfer gaming eth to l2 dapp-link bridge by abi fail", "error", err)
 			return err
@@ -2042,7 +2042,7 @@ func (s *RpcServer) SocialStrategyETHToL2DappLinkBridge(chainID uint64) error {
 		log.Info("social strategy transfer eth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
-		tx, err = s.SocialStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
+		tx, err = s.SocialStrategyContract[chainID].TransferETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.BridgeContractAddress[chainID], s.l1StakingManagerAddr, new(big.Int).SetUint64(21000))
 		if err != nil {
 			log.Error("transfer social eth to l2 dapp-link bridge by abi fail", "error", err)
 			return err
@@ -2098,7 +2098,7 @@ func (s *RpcServer) DaStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 		log.Info("da strategy transfer weth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
-		tx, err = s.DAStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
+		tx, err = s.DAStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.BridgeContractAddress[chainID], s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
 		if err != nil {
 			log.Error("transfer da weth to l2 dapp-link bridge by abi fail", "error", err)
 			return err
@@ -2154,7 +2154,7 @@ func (s *RpcServer) GamingStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 		log.Info("gaming strategy transfer weth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
-		tx, err = s.GamingStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
+		tx, err = s.GamingStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.BridgeContractAddress[chainID], s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
 		if err != nil {
 			log.Error("transfer gaming weth to l2 dapp-link bridge by abi fail", "error", err)
 			return err
@@ -2210,7 +2210,7 @@ func (s *RpcServer) SocialStrategyWETHToL2DappLinkBridge(chainID uint64) error {
 		log.Info("social strategy transfer weth to l1")
 		tOpts, err = s.newTransactOpts(ctx, chainID)
 
-		tx, err = s.SocialStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.L1BridgeContractAddress, s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
+		tx, err = s.SocialStrategyContract[chainID].TransferWETHToL2DappLinkBridge(tOpts, new(big.Int).SetUint64(chainID), new(big.Int).SetUint64(s.l1ChainID), s.BridgeContractAddress[chainID], s.l1StakingManagerAddr, s.WEthAddress[chainID], new(big.Int).SetUint64(21000))
 		if err != nil {
 			log.Error("transfer social weth to l2 dapp-link bridge by abi fail", "error", err)
 			return err
