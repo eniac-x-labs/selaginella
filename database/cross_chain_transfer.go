@@ -52,8 +52,8 @@ type CrossChainTransferDB interface {
 
 type CrossChainTransferView interface {
 	CrossChainTransferByTxHash(txHash string) (*CrossChainTransfer, error)
-	OldestPendingSentTransaction() (*CrossChainTransfer, error)
-	OldestPendingNoSentTransaction() (*CrossChainTransfer, error)
+	OldestPendingSentTransaction() ([]CrossChainTransfer, error)
+	OldestPendingNoSentTransaction() ([]CrossChainTransfer, error)
 	GetPeriodTotalFee(startTimestamp uint64, endTimeStamp uint64, tokenAddress common.Address) (*big.Int, error)
 }
 
@@ -157,28 +157,28 @@ func (c *crossChainTransferDB) BuildCrossChainTransfer(in *pb.CrossChainTransfer
 	}
 }
 
-func (c *crossChainTransferDB) OldestPendingNoSentTransaction() (*CrossChainTransfer, error) {
-	var crossChainTransfer CrossChainTransfer
-	result := c.gorm.Table("cross_chain_transfer").Where("status = ? and tx_hash = ?", PendingStatus, common.Hash{}.String()).Order("timestamp asc").Find(&crossChainTransfer)
+func (c *crossChainTransferDB) OldestPendingNoSentTransaction() ([]CrossChainTransfer, error) {
+	var crossChainTransfer []CrossChainTransfer
+	result := c.gorm.Table("cross_chain_transfer").Where("status = ? and tx_hash = ?", PendingStatus, common.Hash{}.String()).Order("timestamp asc").Limit(10).Find(&crossChainTransfer)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, result.Error
 		}
 		return nil, result.Error
 	}
-	return &crossChainTransfer, nil
+	return crossChainTransfer, nil
 }
 
-func (c *crossChainTransferDB) OldestPendingSentTransaction() (*CrossChainTransfer, error) {
-	var crossChainTransfer CrossChainTransfer
-	result := c.gorm.Table("cross_chain_transfer").Where("status = ? and tx_hash != ?", PendingStatus, common.Hash{}.String()).Order("timestamp asc").Find(&crossChainTransfer)
+func (c *crossChainTransferDB) OldestPendingSentTransaction() ([]CrossChainTransfer, error) {
+	var crossChainTransfer []CrossChainTransfer
+	result := c.gorm.Table("cross_chain_transfer").Where("status = ? and tx_hash != ?", PendingStatus, common.Hash{}.String()).Order("timestamp asc").Limit(10).Find(&crossChainTransfer)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, result.Error
 		}
 		return nil, result.Error
 	}
-	return &crossChainTransfer, nil
+	return crossChainTransfer, nil
 }
 
 func (c *crossChainTransferDB) UpdateCrossChainTransferTransactionHash(transfer CrossChainTransfer) error {
