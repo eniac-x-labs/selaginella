@@ -759,9 +759,10 @@ func (s *RpcServer) SendBridgeTransaction() error {
 	for _, bridgeTx := range bridgeTxs {
 		bridge, err := s.bridgeLogic(ctx, &bridgeTx)
 		if err != nil {
-			fmt.Println(bridge)
-			if err = s.db.CrossChainTransfer.UpdateCrossChainTransferFailStatus(*bridge); err != nil {
-				return err
+			if bridge != nil {
+				if err = s.db.CrossChainTransfer.UpdateCrossChainTransferFailStatus(*bridge); err != nil {
+					return err
+				}
 			}
 			return err
 		}
