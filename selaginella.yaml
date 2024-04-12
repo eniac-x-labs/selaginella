@@ -64,10 +64,10 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x1689A25f116A91E116695BcdE23265b22155DD84'
-    gaming_strategy_address: '0x1bC6F906b6E781D7E8c735299ABaE5Ab56e79940'
-    social_strategy_address: '0x79852B60e319B0a9652d1a7Bab0cd22c795AfDaC'
-    strategy_manager: '0x4d41855Ac7d2ee1322F82f62CD50969bfE651b44'
+    da_strategy_address: '0x2E7D31B4454cBd86A0418E553EDA2DFB195752Df'
+    gaming_strategy_address: '0xA9CEB5C62F245a85888bd9Eb808B3a401C270CCc'
+    social_strategy_address: '0x94DcC85d8490de7C7D6cA64ab1689c701Aeea35e'
+    strategy_manager: '0xBbdcaCd0DfF7f168A90b1e41c20CE8B9798fcA16'
 
 
   - rpc_url: 'https://base-sepolia.g.alchemy.com/v2/XBMhzm0JcYtvq35NAbDOxEVI3NzqgAb3'
