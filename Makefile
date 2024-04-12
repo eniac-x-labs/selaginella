@@ -46,7 +46,7 @@ binding-l1p:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_l1_pool_manager.go \
+	--out bindings/bridge/bvm_l1_pool_manager.go \
 	--type L1PoolManager \
 	--bin $(temp)
 
@@ -62,7 +62,7 @@ binding-l2p:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_l2_pool_manager.go \
+	--out bindings/bridge/bvm_l2_pool_manager.go \
 	--type L2PoolManager \
 	--bin $(temp)
 
@@ -94,7 +94,7 @@ binding-strategyB:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_strategy_base.go \
+	--out bindings/staking/bvm_strategy_base.go \
 	--type StrategyBase \
 	--bin $(temp)
 
@@ -110,7 +110,7 @@ binding-stakingM:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_staking_manager.go \
+	--out bindings/staking/bvm_staking_manager.go \
 	--type StakingManager \
 	--bin $(temp)
 
@@ -126,7 +126,7 @@ binding-dETH:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_deth.go \
+	--out bindings/staking/bvm_deth.go \
 	--type DETH \
 	--bin $(temp)
 

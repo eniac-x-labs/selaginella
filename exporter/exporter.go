@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/evm-layer2/selaginella/bindings/bridge"
 	"math/big"
 	"net/http"
 	"strings"
@@ -25,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/evm-layer2/selaginella/bindings"
 	common2 "github.com/evm-layer2/selaginella/common"
 	"github.com/evm-layer2/selaginella/common/tasks"
 	"github.com/evm-layer2/selaginella/config"
@@ -47,8 +47,8 @@ type Exporter struct {
 	DAIAddress          map[uint64]common.Address
 	RawL1BridgeContract *bind.BoundContract
 	RawL2BridgeContract map[uint64]*bind.BoundContract
-	L1BridgeContract    *bindings.L1PoolManager
-	L2BridgeContract    map[uint64]*bindings.L2PoolManager
+	L1BridgeContract    *bridge.L1PoolManager
+	L2BridgeContract    map[uint64]*bridge.L2PoolManager
 	privateKey          *ecdsa.PrivateKey
 	l1ChainID           uint64
 	stopped             atomic.Bool
@@ -72,8 +72,8 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
-	var l1BridgeContract *bindings.L1PoolManager
-	l2BridgeContracts := make(map[uint64]*bindings.L2PoolManager)
+	var l1BridgeContract *bridge.L1PoolManager
+	l2BridgeContracts := make(map[uint64]*bridge.L2PoolManager)
 	poolAddresses := make(map[uint64]common.Address)
 	EthAddress := make(map[uint64]common.Address)
 	WEthAddress := make(map[uint64]common.Address)
@@ -91,7 +91,7 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 			ethClients[chainRpcCfg[i].ChainId] = client
 
 			l1Parsed, err := abi.JSON(strings.NewReader(
-				bindings.L1PoolManagerABI,
+				bridge.L1PoolManagerABI,
 			))
 			if err != nil {
 				log.Errorln("selaginella parse l1 pool contract abi fail", "err", err)
@@ -105,7 +105,7 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 			)
 			rawL1BridgeContract = rawL1PoolContract
 
-			l1PoolContract, err := bindings.NewL1PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1Client)
+			l1PoolContract, err := bridge.NewL1PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l1Client)
 			l1BridgeContract = l1PoolContract
 			poolAddresses[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress)
 			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)
@@ -123,7 +123,7 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 			ethClients[chainRpcCfg[i].ChainId] = client
 
 			l2Parsed, err := abi.JSON(strings.NewReader(
-				bindings.L2PoolManagerABI,
+				bridge.L2PoolManagerABI,
 			))
 			if err != nil {
 				log.Errorln("selaginella parse l2 pool contract abi fail", "err", err)
@@ -137,7 +137,7 @@ func NewExporter(ctx context.Context, exporterConfig config.Exporter, hsmCfg *Hs
 			)
 			rawL2BridgeContracts[chainRpcCfg[i].ChainId] = rawL2PoolContract
 
-			l2PoolContract, err := bindings.NewL2PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l2Client)
+			l2PoolContract, err := bridge.NewL2PoolManager(common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress), l2Client)
 			l2BridgeContracts[chainRpcCfg[i].ChainId] = l2PoolContract
 			poolAddresses[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].FoundingPoolAddress)
 			EthAddress[chainRpcCfg[i].ChainId] = common.HexToAddress(chainRpcCfg[i].EthAddress)

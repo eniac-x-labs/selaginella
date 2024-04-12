@@ -53,6 +53,7 @@ func NewBatchMintDB(db *gorm.DB) BatchMintDB {
 
 func (b *batchMintDB) BuildBatchMint(in *pb.BatchMintRequest) []BatchMint {
 	var batches []BatchMint
+
 	for addr, shares := range in.Mint {
 		sharesB, _ := new(big.Int).SetString(shares, 10)
 		batch := BatchMint{

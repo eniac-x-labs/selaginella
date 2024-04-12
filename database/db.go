@@ -22,6 +22,7 @@ type DB struct {
 	UpdateWithdrawFundingPoolBalance UpdateWithdrawFundingPoolBalanceDB
 	UnstakeBatch                     UnstakeBatchDB
 	UnstakeSingle                    UnstakeSingleDB
+	TransferToL2Bridge               TransferToL2BridgeDB
 	BatchMint                        BatchMintDB
 }
 
@@ -58,6 +59,7 @@ func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
 		UpdateWithdrawFundingPoolBalance: NewWithdrawUpdateFundingPoolBalanceDB(gorm),
 		UnstakeBatch:                     NewUnstakeBatchDB(gorm),
 		UnstakeSingle:                    NewUnstakeSingleDB(gorm),
+		TransferToL2Bridge:               NewTransferToL2BridgeDB(gorm),
 		BatchMint:                        NewBatchMintDB(gorm),
 	}
 	return db, nil
@@ -72,6 +74,7 @@ func (db *DB) Transaction(fn func(db *DB) error) error {
 			UpdateWithdrawFundingPoolBalance: NewWithdrawUpdateFundingPoolBalanceDB(tx),
 			UnstakeBatch:                     NewUnstakeBatchDB(tx),
 			UnstakeSingle:                    NewUnstakeSingleDB(tx),
+			TransferToL2Bridge:               NewTransferToL2BridgeDB(tx),
 			BatchMint:                        NewBatchMintDB(tx),
 		}
 		return fn(txDB)

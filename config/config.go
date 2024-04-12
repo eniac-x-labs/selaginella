@@ -56,7 +56,6 @@ type Config struct {
 	Database             DB       `yaml:"database"`
 	Exporter             Exporter `yaml:"exporter"`
 	L1StakingManagerAddr string   `yaml:"l1_staking_manager_addr"`
-	L1DETHAddr           string   `yaml:"l1_deth_addr"`
 	ChainId              ChainId  `yaml:"chain_id"`
 }
 

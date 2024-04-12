@@ -9,7 +9,7 @@ metrics:
 rpcs:
   - rpc_url: 'https://rpc.ankr.com/eth_holesky/7b0caac2853c9795d0a005c5f7696acc7be9adc22ef8504a56a5aeff2ad9ce0a'
     chain_id: 17000
-    founding_pool_address: '0xD6A7740477dD55d5feD7a5fE81C52eA168CDe3FF'
+    founding_pool_address: '0x78de729757Ef7C48c76C9EEe35B38Cc7108d59ca'
     eth_address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
     weth_address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'
     usdt_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
@@ -64,10 +64,10 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x881eB9cB5E3205dF3AF64d4dC7945a58c47863B7'
-    gaming_strategy_address: '0x2e15f7861383C8a05C94d5B851BF3aFE09be875c'
-    social_strategy_address: '0xf260C4C97787d75b1BAd86bFb22bD35D00DF74E6'
-    strategy_manager: '0x67B5E11d4c65c3137D96c44841c43590cA6Af558'
+    da_strategy_address: '0x3Ef586312fad1C9f3834AD7ac46e9E33f6EF4eC1'
+    gaming_strategy_address: '0x8224259e8E551F79ec10555DA456A456eE50aF1D'
+    social_strategy_address: '0x927dc651EE7b9D8FF3D59E4375fd8E915b6Be920'
+    strategy_manager: '0x2539C2c193bf8b9E33E9019B88424450A9A625D3'
 
 
   - rpc_url: 'https://base-sepolia.g.alchemy.com/v2/XBMhzm0JcYtvq35NAbDOxEVI3NzqgAb3'
@@ -176,8 +176,7 @@ database:
 exporter:
   exporter_address: "0.0.0.0:8081"
 
-l1_staking_manager_addr: "0x9E0A78CcA069b8A6326048e7e2afB6B952dbc4ed"
-l1_deth_addr: "0xD6f0F961B7199C685C12bE9c6F92f851Da1A866c"
+l1_staking_manager_addr: "0x2636ADa1aEB7FFe84C3D6a26eCCAC6b385BF2A73"
 
 chain_id:
   l1_chain_id: 17000

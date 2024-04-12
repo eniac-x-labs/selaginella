@@ -99,6 +99,19 @@ CREATE INDEX IF NOT EXISTS unstake_single_timestamp ON unstake_single(timestamp)
 CREATE INDEX IF NOT EXISTS unstake_single_tx_hash ON unstake_single(tx_hash);
 CREATE INDEX IF NOT EXISTS unstake_single_source_hash ON unstake_single(source_hash);
 
+CREATE TABLE IF NOT EXISTS transfer_to_l2_bridge (
+     guid                  VARCHAR PRIMARY KEY,
+     batch                 UINT256 NOT NULL,
+     chain_id              UINT256 NOT NULL,
+     strategy_address      VARCHAR NOT NULL,
+     tx_hash               VARCHAR NOT NULL,
+     status                SMALLINT DEFAULT 0,
+     timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
+);
+CREATE INDEX IF NOT EXISTS transfer_to_l2_bridge_timestamp ON transfer_to_l2_bridge(timestamp);
+CREATE INDEX IF NOT EXISTS transfer_to_l2_bridge_tx_hash ON transfer_to_l2_bridge(tx_hash);
+CREATE INDEX IF NOT EXISTS transfer_to_l2_bridge_batch ON transfer_to_l2_bridge(batch);
+
 CREATE TABLE IF NOT EXISTS batch_mint (
      guid                  VARCHAR PRIMARY KEY,
      staker_address        VARCHAR NOT NULL,
