@@ -10,6 +10,7 @@ service BridgeService {
   rpc UpdateWithdrawFundingPoolBalance(UpdateWithdrawFundingPoolBalanceRequest) returns (UpdateWithdrawFundingPoolBalanceResponse);
   rpc UnstakeBatch(UnstakeBatchRequest) returns (UnstakeBatchResponse);
   rpc UnstakeSingle(UnstakeSingleRequest) returns (UnstakeSingleResponse);
+  rpc TransferToL2DappLinkBridge(TransferToL2DappLinkBridgeRequest) returns (TransferToL2DappLinkBridgeResponse);
   rpc BatchMint(BatchMintRequest) returns (BatchMintResponse);
 }
 
@@ -91,6 +92,17 @@ message UnstakeSingleRequest {
 }
 
 message UnstakeSingleResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message TransferToL2DappLinkBridgeRequest {
+  uint64 batch = 1;
+  string chain_id = 2;
+  string strategy_address = 3;
+}
+
+message TransferToL2DappLinkBridgeResponse {
   bool success = 1;
   string message = 2;
 }
