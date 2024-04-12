@@ -18,6 +18,7 @@ const (
 	PendingStatus = 0
 	sentStatus    = 1
 	SuccessStatus = 2
+	FailStatus    = 3
 )
 
 type CrossChainTransfer struct {
@@ -48,6 +49,7 @@ type CrossChainTransferDB interface {
 	ChangeCrossChainTransferSentStatusByTxHash(txHash string) error
 	ChangeCrossChainTransferSuccessStatueByTxHash(txHash string) error
 	UpdateCrossChainTransferTransactionHash(CrossChainTransfer) error
+	UpdateCrossChainTransferFailStatus(CrossChainTransfer) error
 }
 
 type CrossChainTransferView interface {
@@ -183,6 +185,14 @@ func (c *crossChainTransferDB) OldestPendingSentTransaction() ([]CrossChainTrans
 
 func (c *crossChainTransferDB) UpdateCrossChainTransferTransactionHash(transfer CrossChainTransfer) error {
 	result := c.gorm.Table("cross_chain_transfer").Where("guid = ?", transfer.GUID.String()).Updates(map[string]interface{}{"tx_hash": transfer.TxHash.String()})
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (c *crossChainTransferDB) UpdateCrossChainTransferFailStatus(transfer CrossChainTransfer) error {
+	result := c.gorm.Table("cross_chain_transfer").Where("guid = ?", transfer.GUID.String()).Updates(map[string]interface{}{"status": FailStatus})
 	if result.Error != nil {
 		return result.Error
 	}
