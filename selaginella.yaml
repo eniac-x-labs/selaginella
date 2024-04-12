@@ -176,8 +176,8 @@ database:
 exporter:
   exporter_address: "0.0.0.0:8081"
 
-l1_staking_manager_addr: "0xA9DB304152fE95D317aacF8DA7124ADC5d807483"
-l1_deth_addr: "0x949A2d7f5949c4d5f67A996166fBd2f547cb3351"
+l1_staking_manager_addr: "0x9E0A78CcA069b8A6326048e7e2afB6B952dbc4ed"
+l1_deth_addr: "0xD6f0F961B7199C685C12bE9c6F92f851Da1A866c"
 
 chain_id:
   l1_chain_id: 17000
