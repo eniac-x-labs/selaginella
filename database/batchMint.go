@@ -33,6 +33,7 @@ type BatchMintDB interface {
 	BuildBatchMint(in *pb.BatchMintRequest) []BatchMint
 	ChangeBatchMintSentStatusByTxHash(txHash string) error
 	UpdateBatchMintTransactionHash([]BatchMint) error
+	UpdateBatchMintFailStatus(BatchMint) error
 }
 
 type BatchMintView interface {
@@ -123,6 +124,15 @@ func (b *batchMintDB) BatchMintsByBatch(batch uint64) ([]BatchMint, error) {
 func (b *batchMintDB) ChangeBatchMintSentStatusByTxHash(txHash string) error {
 
 	result := b.gorm.Table("batch_mint").Where("tx_hash = ?", txHash).Updates(map[string]interface{}{"status": sentStatus})
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (b *batchMintDB) UpdateBatchMintFailStatus(batch BatchMint) error {
+	result := b.gorm.Table("batch_mint").Where("batch = ?", batch.Batch).Updates(map[string]interface{}{"status": FailStatus})
 	if result.Error != nil {
 		return result.Error
 	}
