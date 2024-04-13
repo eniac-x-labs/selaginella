@@ -1684,6 +1684,10 @@ func (s *RpcServer) SendBatchMintTransaction() error {
 	ETH32, _ := new(big.Int).SetString("32000000000000000000", 10)
 	if new(big.Int).Mod(totalAmount, ETH32).Sign() != 0 {
 		log.Error("the amount of stake is not a multiple of 32", "amount=", totalAmount.String())
+		err = s.db.BatchMint.UpdateBatchMintFailStatus(*batchMintTx)
+		if err != nil {
+			return err
+		}
 		return errors.New("the amount of stake is not a multiple of 32")
 	}
 
