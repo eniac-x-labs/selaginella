@@ -1935,7 +1935,7 @@ func (s *RpcServer) ChangeTransferToL2BridgeTransactionStatus() error {
 	}
 
 	if tx.Batch != nil {
-		receipt, err = s.ethClients[s.l1ChainID].TxReceiptDetailByHash(tx.TxHash)
+		receipt, err = s.ethClients[tx.ChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
 		if errors.Is(err, ethereum.NotFound) {
 			log.Warn("transaction not found")
 			return nil
