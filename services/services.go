@@ -767,26 +767,27 @@ func (s *RpcServer) SendBridgeTransaction() error {
 			return err
 		}
 
-		retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
-		if _, err := retry.Do[interface{}](context.Background(), 10, retryStrategy, func() (interface{}, error) {
-			if err := s.db.Transaction(func(tx *database.DB) error {
-				if bridge != nil {
-					if err := s.db.CrossChainTransfer.UpdateCrossChainTransferTransactionHash(*bridge); err != nil {
-						return err
+		if bridge.DestReceiveAddress != s.l1StakingManagerAddr {
+			retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+			if _, err := retry.Do[interface{}](context.Background(), 10, retryStrategy, func() (interface{}, error) {
+				if err := s.db.Transaction(func(tx *database.DB) error {
+					if bridge != nil {
+						if err := s.db.CrossChainTransfer.UpdateCrossChainTransferTransactionHash(*bridge); err != nil {
+							return err
+						}
 					}
+					return nil
+				}); err != nil {
+					log.Error("unable to persist batch", "err", err)
+					return nil, fmt.Errorf("unable to persist batch: %w", err)
 				}
-				return nil
+				return nil, nil
 			}); err != nil {
-				log.Error("unable to persist batch", "err", err)
-				return nil, fmt.Errorf("unable to persist batch: %w", err)
+				return err
 			}
-			return nil, nil
-		}); err != nil {
-			return err
+
+			log.Info("send bridge transaction success", "tx_hash", bridge.TxHash)
 		}
-
-		log.Info("send bridge transaction success", "tx_hash", bridge.TxHash)
-
 	}
 
 	return nil
