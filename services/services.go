@@ -2043,6 +2043,7 @@ func (s *RpcServer) CompletePoolAndNew() error {
 	s.poolEndTimestamp = l1EthPool.EndTimestamp
 
 	if time.Now().Unix() >= int64(s.poolEndTimestamp) {
+		log.Info("bridge expired", "endTime", s.poolEndTimestamp)
 		tOpts, err = s.newTransactOpts(ctx, s.l1ChainID)
 
 		newCPools, err = s.newPools(newPools)
@@ -2073,6 +2074,8 @@ func (s *RpcServer) CompletePoolAndNew() error {
 
 		log.Info("send complete pool and new transaction success", "tx_hash", receipt.TxHash)
 
+	} else {
+		log.Info("no need to send complete pool and new transaction")
 	}
 
 	return nil
