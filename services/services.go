@@ -56,8 +56,10 @@ type RpcServer struct {
 	db                          *database.DB
 	ethClients                  map[uint64]node.EthClient
 	RawL1BridgeContract         *bind.BoundContract
+	RawL1StakingBridgeContract  *bind.BoundContract
 	RawL2BridgeContract         map[uint64]*bind.BoundContract
 	L1BridgeContract            *bridge.L1PoolManager
+	L1StakingBridgeContract     *bridge.L1PoolManager
 	BridgeContractAddress       map[uint64]common.Address
 	L2BridgeContract            map[uint64]*bridge.L2PoolManager
 	DAStrategyContract          map[uint64]*staking.StrategyBase
@@ -108,8 +110,10 @@ func (s *RpcServer) Stopped() bool {
 func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig, hsmCfg *HsmConfig, chainRpcCfg []*config.RPC, priKey *ecdsa.PrivateKey, chainIds config.ChainId, l1StakingManagerAddr string, shutdown context.CancelCauseFunc) (*RpcServer, error) {
 	ethClients := make(map[uint64]node.EthClient)
 	var rawL1BridgeContract *bind.BoundContract
+	var rawL1StakingBridgeContract *bind.BoundContract
 	rawL2BridgeContracts := make(map[uint64]*bind.BoundContract)
 	var l1BridgeContract *bridge.L1PoolManager
+	var l1StakingBridgeContract *bridge.L1PoolManager
 	l2BridgeContracts := make(map[uint64]*bridge.L2PoolManager)
 	EthAddress := make(map[uint64]common.Address)
 	WEthAddress := make(map[uint64]common.Address)
@@ -160,6 +164,11 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 
 			l1Client, _ := node.DialEthClientWithTimeout(ctx, chainRpcCfg[i].RpcUrl, false)
 
+			l1StakingBridgeContract, rawL1StakingBridgeContract, err = bindL1PoolManager(chainRpcCfg[i].FoundingPoolAddress, l1Client)
+			if err != nil {
+				return nil, err
+			}
+
 			l1StakingManagerContract, rawL1StakingManagerContract, err = bindL1StakingManager(l1StakingManagerAddr, l1Client)
 			if err != nil {
 				return nil, err
@@ -209,7 +218,9 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 		ethClients:                  ethClients,
 		RawL1BridgeContract:         rawL1BridgeContract,
 		RawL2BridgeContract:         rawL2BridgeContracts,
+		RawL1StakingBridgeContract:  rawL1StakingBridgeContract,
 		L1BridgeContract:            l1BridgeContract,
+		L1StakingBridgeContract:     l1StakingBridgeContract,
 		BridgeContractAddress:       PoolContractAddr,
 		DAStrategyAddress:           DaStrategyAddr,
 		GamingStrategyAddress:       GamingStrategyAddr,
@@ -1700,13 +1711,13 @@ func (s *RpcServer) SendBatchMintTransaction() error {
 	}
 
 	log.Info(fmt.Sprintf("send stake transcation , totalAmount=%v, stakingManagerAddr=%v, batchLen=%v", totalAmount.String(), s.l1StakingManagerAddr, len(Batcher)))
-	tx, err = s.L1BridgeContract.BridgeFinalizeETHForStaking(tOpts, totalAmount, s.l1StakingManagerAddr, Batcher)
+	tx, err = s.L1StakingBridgeContract.BridgeFinalizeETHForStaking(tOpts, totalAmount, s.l1StakingManagerAddr, Batcher)
 	if err != nil {
 		log.Error("get stake transaction abi fail", "error", err)
 		return err
 	}
 
-	finalTx, err = s.RawL1BridgeContract.RawTransact(tOpts, tx.Data())
+	finalTx, err = s.RawL1StakingBridgeContract.RawTransact(tOpts, tx.Data())
 	if err != nil {
 		log.Error("raw send stake transaction fail", "error", err)
 		return err
