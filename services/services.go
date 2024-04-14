@@ -445,7 +445,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
-	if in.SourceChainId == "1442" || in.DestChainId == "1442" || in.SourceChainId == "11155111" || in.DestChainId == "11155111" {
+	if in.SourceChainId == "1442" || in.DestChainId == "1442" || in.SourceChainId == "17000" || in.DestChainId == "17000" {
 		return &pb.CrossChainTransferResponse{
 			Success: true,
 			Message: "call cross chain transfer success",
@@ -1699,6 +1699,7 @@ func (s *RpcServer) SendBatchMintTransaction() error {
 		return errors.New("the amount of stake is not a multiple of 32")
 	}
 
+	log.Info(fmt.Sprintf("send stake transcation , totalAmount=%v, stakingManagerAddr=%v, batchLen=%v", totalAmount.String(), s.l1StakingManagerAddr, len(Batcher)))
 	tx, err = s.L1BridgeContract.BridgeFinalizeETHForStaking(tOpts, totalAmount, s.l1StakingManagerAddr, Batcher)
 	if err != nil {
 		log.Error("get stake transaction abi fail", "error", err)
