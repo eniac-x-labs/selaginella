@@ -1406,7 +1406,10 @@ func (s *RpcServer) SendUnstakeBatchTransaction() error {
 
 	log.Info(fmt.Sprintf("send claim unstake request, requestLen=%v, sourceChainId=%v, destChainId=%v, gasLimit=%v", len(requests), unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit))
 	tx, err = s.l1StakingManagerContract.ClaimUnstakeRequest(tOpts, requests, unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit)
-
+	if err != nil {
+		log.Error("get l1 staking manager claim unstake request abi fail", "error", err)
+		return err
+	}
 	finalTx, err = s.RawL1StakingManagerContract.RawTransact(tOpts, tx.Data())
 	if err != nil {
 		log.Error("raw send l1 staking manager claim unstake request transaction fail", "error", err)
