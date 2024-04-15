@@ -616,8 +616,7 @@ func (s *RpcServer) UnstakeBatch(ctx context.Context, in *pb.UnstakeBatchRequest
 	}
 
 	sourceHash := common.HexToHash(in.SourceHash)
-	unstakeBatch := s.db.UnstakeBatch.BuildUnstakeBatch(in, sourceHash)
-	unstakeBatchs = append(unstakeBatchs, unstakeBatch)
+	unstakeBatchs = s.db.UnstakeBatch.BuildUnstakeBatch(in, sourceHash)
 
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
@@ -1395,8 +1394,14 @@ func (s *RpcServer) SendUnstakeBatchTransaction() error {
 		return err
 	}
 
-	log.Info(fmt.Sprintf("send claim unstake request, strategyAddr=%v, bridgeAddr=%v, sourceChainId=%v, destChainId=%v, gasLimit=%v", unStakeTx.StrategyAddress, unStakeTx.BridgeAddress, unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit))
-	tx, err = s.l1StakingManagerContract.ClaimUnstakeRequest(tOpts, unStakeTx.StrategyAddress, unStakeTx.BridgeAddress, unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit)
+	unstakeTxs, err := s.db.UnstakeBatch.UnstakeBatchsBySourceHash(unStakeTx.SourceHash.String())
+	var requests []common.Address
+	for _, unstake := range unstakeTxs {
+		requests = append(requests, unstake.StrategyAddress)
+	}
+
+	log.Info(fmt.Sprintf("send claim unstake request, requestLen=%v, sourceChainId=%v, destChainId=%v, gasLimit=%v", len(requests), unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit))
+	tx, err = s.l1StakingManagerContract.ClaimUnstakeRequest(tOpts, requests, unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit)
 
 	finalTx, err = s.RawL1StakingManagerContract.RawTransact(tOpts, tx.Data())
 	if err != nil {
