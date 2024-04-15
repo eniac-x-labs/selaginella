@@ -1395,9 +1395,13 @@ func (s *RpcServer) SendUnstakeBatchTransaction() error {
 	}
 
 	unstakeTxs, err := s.db.UnstakeBatch.UnstakeBatchsBySourceHash(unStakeTx.SourceHash.String())
-	var requests []common.Address
+	var requests []staking.IUnstakeRequestsManagerWriterequestsInfo
 	for _, unstake := range unstakeTxs {
-		requests = append(requests, unstake.StrategyAddress)
+		request := staking.IUnstakeRequestsManagerWriterequestsInfo{
+			RequestAddress:      unstake.StrategyAddress,
+			UnStakeMessageNonce: unstake.MsgNonce,
+		}
+		requests = append(requests, request)
 	}
 
 	log.Info(fmt.Sprintf("send claim unstake request, requestLen=%v, sourceChainId=%v, destChainId=%v, gasLimit=%v", len(requests), unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit))

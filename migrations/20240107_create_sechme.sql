@@ -71,6 +71,7 @@ CREATE INDEX IF NOT EXISTS update_withdraw_funding_pool_balance_token_address ON
 CREATE TABLE IF NOT EXISTS unstake_batch (
     guid                  VARCHAR PRIMARY KEY,
     strategy_address      VARCHAR NOT NULL,
+    msg_nonce             UINT256 NOT NULL,
     source_chain_id       UINT256 NOT NULL,
     dest_chain_id         UINT256 NOT NULL,
     tx_hash               VARCHAR NOT NULL,
