@@ -16,6 +16,7 @@ import (
 type UnstakeBatch struct {
 	GUID            uuid.UUID      `gorm:"primaryKey;DEFAULT replace(uuid_generate_v4()::text,'-','')" json:"guid"`
 	StrategyAddress common.Address `gorm:"column:strategy_address;serializer:bytes" db:"strategy_address" json:"strategy_address" form:"strategy_address"`
+	MsgNonce        *big.Int       `gorm:"serializer:u256;column:msg_nonce" db:"msg_nonce" json:"msg_nonce" form:"msg_nonce"`
 	SourceChainId   *big.Int       `gorm:"serializer:u256;column:source_chain_id" db:"source_chain_id" json:"source_chain_id" form:"source_chain_id"`
 	DestChainId     *big.Int       `gorm:"serializer:u256;column:dest_chain_id" db:"dest_chain_id" json:"dest_chain_id" form:"dest_chain_id"`
 	TxHash          common.Hash    `gorm:"column:tx_hash;serializer:bytes" db:"tx_hash" json:"tx_hash" form:"tx_hash"`
@@ -56,14 +57,15 @@ func NewUnstakeBatchDB(db *gorm.DB) UnstakeBatchDB {
 func (u *unstakeBatchDB) BuildUnstakeBatch(in *pb.UnstakeBatchRequest, sourceHash common.Hash) []UnstakeBatch {
 	var unstakeBatchs []UnstakeBatch
 
-	for _, v := range in.StrategyAddress {
+	for strategyAddr, msgNonce := range in.Strategy {
 		sci, _ := new(big.Int).SetString(in.SourceChainId, 10)
 		dci, _ := new(big.Int).SetString(in.DestChainId, 10)
 		gasLimit, _ := new(big.Int).SetString(in.GasLimit, 10)
 
 		unstakeBatch := UnstakeBatch{
 			GUID:            uuid.New(),
-			StrategyAddress: common.HexToAddress(v),
+			StrategyAddress: common.HexToAddress(strategyAddr),
+			MsgNonce:        new(big.Int).SetUint64(msgNonce),
 			SourceChainId:   sci,
 			DestChainId:     dci,
 			TxHash:          common.Hash{},

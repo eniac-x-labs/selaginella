@@ -190,7 +190,7 @@ database:
 exporter:
   exporter_address: "0.0.0.0:8081"
 
-l1_staking_manager_addr: "0x08eecB25D9a4C837192Ae87ce965ce0b41F45CD0"
+l1_staking_manager_addr: "0xf72ef31B541154b07541fDFFc1DAb054852ab770"
 
 chain_id:
   l1_chain_sepolia_id: 11155111
