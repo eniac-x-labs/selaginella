@@ -7,3 +7,5 @@ selaginella
 
 #IDE
 .idea
+
+./exporter/exporter_test.go

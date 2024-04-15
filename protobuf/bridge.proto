@@ -70,12 +70,11 @@ message UpdateWithdrawFundingPoolBalanceResponse {
 }
 
 message UnstakeBatchRequest {
-  string l2Strategy_address = 1;
-  string bridge_address = 2;
-  string source_chain_id = 3;
-  string dest_chain_id = 4;
-  string gas_limit = 5;
-  string source_hash = 6;
+  repeated string Strategy_address = 1;
+  string source_chain_id = 2;
+  string dest_chain_id = 3;
+  string gas_limit = 4;
+  string source_hash = 5;
 }
 
 message UnstakeBatchResponse {
