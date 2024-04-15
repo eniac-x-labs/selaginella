@@ -1395,6 +1395,7 @@ func (s *RpcServer) SendUnstakeBatchTransaction() error {
 		return err
 	}
 
+	log.Info(fmt.Sprintf("send claim unstake request, strategyAddr=%v, bridgeAddr=%v, sourceChainId=%v, destChainId=%v, gasLimit=%v", unStakeTx.StrategyAddress, unStakeTx.BridgeAddress, unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit))
 	tx, err = s.l1StakingManagerContract.ClaimUnstakeRequest(tOpts, unStakeTx.StrategyAddress, unStakeTx.BridgeAddress, unStakeTx.SourceChainId, unStakeTx.DestChainId, unStakeTx.GasLimit)
 
 	finalTx, err = s.RawL1StakingManagerContract.RawTransact(tOpts, tx.Data())
@@ -1454,6 +1455,7 @@ func (s *RpcServer) SendUnstakeSingleTransaction() error {
 		return err
 	}
 
+	log.Info(fmt.Sprintf("send claim single request, chainId=%v ,stakerAddr=%v, strategyAddr=%v, sharesAmount=%v", unStakeSTx.ChainId.Uint64(), unStakeSTx.StakerAddress, unStakeSTx.StrategyAddress, unStakeSTx.SharesAmount))
 	tx, err = s.StrategyManagerContract[unStakeSTx.ChainId.Uint64()].MigrateRelatedL1StakerShares(tOpts, unStakeSTx.StakerAddress, unStakeSTx.StrategyAddress, unStakeSTx.SharesAmount)
 
 	finalTx, err = s.RawStrategyManagerContract[unStakeSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
