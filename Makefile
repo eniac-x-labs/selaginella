@@ -16,7 +16,7 @@ L2POOL_ABI_ARTIFACT := bindings/abi/L2PoolManager.json
 STRATEGYBASE_ABI_ARTIFACT := bindings/abi/StrategyBase.json
 STRATEGYMANAGER_ABI_ARTIFACT := bindings/abi/StrategyManager.json
 STAKINGMANAGER_ABI_ARTIFACT := bindings/abi/StakingManager.json
-DETH_ABI_ARTIFACT := bindings/abi/DETH.json
+DELEGATIONMANAGER_ABI_ARTIFACT := bindings/abi/DelegationManager.json
 
 all: test build
 
@@ -78,7 +78,7 @@ binding-strategyM:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/bvm_strategy_manager.go \
+	--out bindings/staking/bvm_strategy_manager.go \
 	--type StrategyManager \
 	--bin $(temp)
 
@@ -116,21 +116,21 @@ binding-stakingM:
 
 	rm $(temp)
 
-binding-dETH:
+binding-delegationM:
 	$(eval temp := $(shell mktemp))
 
-	cat $(DETH_ABI_ARTIFACT) \
+	cat $(DELEGATIONMANAGER_ABI_ARTIFACT) \
 	| jq -r .bytecode.object > $(temp)
 
-	cat $(DETH_ABI_ARTIFACT) \
+	cat $(DELEGATIONMANAGER_ABI_ARTIFACT) \
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/staking/bvm_deth.go \
-	--type DETH \
+	--out bindings/staking/bvm_delegatin_manager.go \
+	--type DelegationManager \
 	--bin $(temp)
 
 	rm $(temp)
 
-.PHONY: all build test clean run deps binding-l1p binding-l2p binding-strategyM binding-strategyB binding-stakingM binding-dETH
+.PHONY: all build test clean run deps binding-l1p binding-l2p binding-strategyM binding-strategyB binding-stakingM binding-delegationM
 

@@ -142,3 +142,22 @@ func bindStrategyManager(StrategyManagerAddress string, l2Client *ethclient.Clie
 
 	return strategyManagerContract, rawStrategyManagerContract, nil
 }
+
+func bindDelegationManager(DelegationManagerAddress string, l2Client *ethclient.Client) (*staking.DelegationManager, *bind.BoundContract, error) {
+	delegationManagerParsed, err := abi.JSON(strings.NewReader(
+		staking.DelegationManagerABI,
+	))
+	if err != nil {
+		log.Error("selaginella parse delegation Manager contract abi fail", "err", err)
+		return nil, nil, err
+	}
+
+	rawDelegationManagerContract := bind.NewBoundContract(
+		common.HexToAddress(DelegationManagerAddress), delegationManagerParsed, l2Client, l2Client,
+		l2Client,
+	)
+
+	delegationManagerContract, err := staking.NewDelegationManager(common.HexToAddress(DelegationManagerAddress), l2Client)
+
+	return delegationManagerContract, rawDelegationManagerContract, nil
+}

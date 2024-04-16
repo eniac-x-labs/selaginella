@@ -34,6 +34,7 @@ type RPC struct {
 	GamingStrategyAddress string `yaml:"gaming_strategy_address"`
 	SocialStrategyAddress string `yaml:"social_strategy_address"`
 	StrategyManager       string `yaml:"strategy_manager"`
+	DelegationManager     string `yaml:"delegation_manager"`
 }
 
 type Exporter struct {
