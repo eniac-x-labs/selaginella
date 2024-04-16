@@ -1551,7 +1551,7 @@ func (s *RpcServer) SendMigrateL1SharesTransaction() error {
 		return err
 	}
 
-	finalTx, err = s.RawStrategyManagerContract[mLSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
+	finalTx, err = s.RawDelegationManagerContract[mLSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
 	if err != nil {
 		log.Error("raw send queue withdrawals transaction fail", "error", err)
 		return err
