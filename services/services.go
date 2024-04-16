@@ -474,7 +474,7 @@ func (s *RpcServer) CrossChainTransfer(ctx context.Context, in *pb.CrossChainTra
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
-	if in.SourceChainId == "1442" || in.DestChainId == "1442" || in.SourceChainId == "17000" || in.DestChainId == "17000" {
+	if in.SourceChainId == "1442" || in.DestChainId == "1442" || in.DestChainId == "17000" {
 		return &pb.CrossChainTransferResponse{
 			Success: true,
 			Message: "call cross chain transfer success",
