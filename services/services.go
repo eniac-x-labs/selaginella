@@ -53,38 +53,40 @@ type HsmConfig struct {
 type RpcServer struct {
 	*RpcServerConfig
 	*HsmConfig
-	db                          *database.DB
-	ethClients                  map[uint64]node.EthClient
-	RawL1BridgeContract         *bind.BoundContract
-	RawL1StakingBridgeContract  *bind.BoundContract
-	RawL2BridgeContract         map[uint64]*bind.BoundContract
-	L1BridgeContract            *bridge.L1PoolManager
-	L1StakingBridgeContract     *bridge.L1PoolManager
-	BridgeContractAddress       map[uint64]common.Address
-	L2BridgeContract            map[uint64]*bridge.L2PoolManager
-	DAStrategyContract          map[uint64]*staking.StrategyBase
-	RawDAStrategyContract       map[uint64]*bind.BoundContract
-	DAStrategyAddress           map[uint64]common.Address
-	GamingStrategyContract      map[uint64]*staking.StrategyBase
-	RawGamingStrategyContract   map[uint64]*bind.BoundContract
-	GamingStrategyAddress       map[uint64]common.Address
-	SocialStrategyContract      map[uint64]*staking.StrategyBase
-	RawSocialStrategyContract   map[uint64]*bind.BoundContract
-	SocialStrategyAddress       map[uint64]common.Address
-	l1StakingManagerAddr        common.Address
-	l1StakingManagerContract    *staking.StakingManager
-	RawL1StakingManagerContract *bind.BoundContract
-	StrategyManagerContract     map[uint64]*staking.StrategyManager
-	RawStrategyManagerContract  map[uint64]*bind.BoundContract
-	EthAddress                  map[uint64]common.Address
-	WEthAddress                 map[uint64]common.Address
-	USDTAddress                 map[uint64]common.Address
-	USDCAddress                 map[uint64]common.Address
-	DAIAddress                  map[uint64]common.Address
-	OKBAddress                  map[uint64]common.Address
-	MNTAddress                  map[uint64]common.Address
-	poolStartTimestamp          uint32
-	poolEndTimestamp            uint32
+	db                           *database.DB
+	ethClients                   map[uint64]node.EthClient
+	RawL1BridgeContract          *bind.BoundContract
+	RawL1StakingBridgeContract   *bind.BoundContract
+	RawL2BridgeContract          map[uint64]*bind.BoundContract
+	L1BridgeContract             *bridge.L1PoolManager
+	L1StakingBridgeContract      *bridge.L1PoolManager
+	BridgeContractAddress        map[uint64]common.Address
+	L2BridgeContract             map[uint64]*bridge.L2PoolManager
+	DAStrategyContract           map[uint64]*staking.StrategyBase
+	RawDAStrategyContract        map[uint64]*bind.BoundContract
+	DAStrategyAddress            map[uint64]common.Address
+	GamingStrategyContract       map[uint64]*staking.StrategyBase
+	RawGamingStrategyContract    map[uint64]*bind.BoundContract
+	GamingStrategyAddress        map[uint64]common.Address
+	SocialStrategyContract       map[uint64]*staking.StrategyBase
+	RawSocialStrategyContract    map[uint64]*bind.BoundContract
+	SocialStrategyAddress        map[uint64]common.Address
+	l1StakingManagerAddr         common.Address
+	l1StakingManagerContract     *staking.StakingManager
+	RawL1StakingManagerContract  *bind.BoundContract
+	StrategyManagerContract      map[uint64]*staking.StrategyManager
+	RawStrategyManagerContract   map[uint64]*bind.BoundContract
+	DelegationManagerContract    map[uint64]*staking.DelegationManager
+	RawDelegationManagerContract map[uint64]*bind.BoundContract
+	EthAddress                   map[uint64]common.Address
+	WEthAddress                  map[uint64]common.Address
+	USDTAddress                  map[uint64]common.Address
+	USDCAddress                  map[uint64]common.Address
+	DAIAddress                   map[uint64]common.Address
+	OKBAddress                   map[uint64]common.Address
+	MNTAddress                   map[uint64]common.Address
+	poolStartTimestamp           uint32
+	poolEndTimestamp             uint32
 	pb.UnimplementedBridgeServiceServer
 	stopped atomic.Bool
 	pb.BridgeServiceServer
@@ -130,6 +132,8 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	socialStrategyContracts := make(map[uint64]*staking.StrategyBase)
 	strategyManagerContracts := make(map[uint64]*staking.StrategyManager)
 	rawStrategyManagerContracts := make(map[uint64]*bind.BoundContract)
+	delegationManagerContracts := make(map[uint64]*staking.DelegationManager)
+	rawDelegationManagerContracts := make(map[uint64]*bind.BoundContract)
 	PoolContractAddr := make(map[uint64]common.Address)
 	DaStrategyAddr := make(map[uint64]common.Address)
 	GamingStrategyAddr := make(map[uint64]common.Address)
@@ -191,6 +195,7 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 			socialStrategyContracts[chainRpcCfg[i].ChainId], rawSocialStrategyContracts[chainRpcCfg[i].ChainId], err = bindSocialStrategyBase(chainRpcCfg[i].SocialStrategyAddress, l2Client)
 
 			strategyManagerContracts[chainRpcCfg[i].ChainId], rawStrategyManagerContracts[chainRpcCfg[i].ChainId], err = bindStrategyManager(chainRpcCfg[i].StrategyManager, l2Client)
+			delegationManagerContracts[chainRpcCfg[i].ChainId], rawDelegationManagerContracts[chainRpcCfg[i].ChainId], err = bindDelegationManager(chainRpcCfg[i].DelegationManager, l2Client)
 
 			if err != nil {
 				return nil, err
@@ -212,45 +217,47 @@ func NewRpcServer(ctx context.Context, db *database.DB, grpcCfg *RpcServerConfig
 	}
 
 	return &RpcServer{
-		RpcServerConfig:             grpcCfg,
-		db:                          db,
-		HsmConfig:                   hsmCfg,
-		ethClients:                  ethClients,
-		RawL1BridgeContract:         rawL1BridgeContract,
-		RawL2BridgeContract:         rawL2BridgeContracts,
-		RawL1StakingBridgeContract:  rawL1StakingBridgeContract,
-		L1BridgeContract:            l1BridgeContract,
-		L1StakingBridgeContract:     l1StakingBridgeContract,
-		BridgeContractAddress:       PoolContractAddr,
-		DAStrategyAddress:           DaStrategyAddr,
-		GamingStrategyAddress:       GamingStrategyAddr,
-		SocialStrategyAddress:       SocialStrategyAddr,
-		L2BridgeContract:            l2BridgeContracts,
-		DAStrategyContract:          daStrategyContracts,
-		GamingStrategyContract:      gamingStrategyContracts,
-		SocialStrategyContract:      socialStrategyContracts,
-		RawDAStrategyContract:       rawDaStrategyContracts,
-		RawGamingStrategyContract:   rawGamingStrategyContracts,
-		RawSocialStrategyContract:   rawSocialStrategyContracts,
-		l1StakingManagerAddr:        common.HexToAddress(l1StakingManagerAddr),
-		l1StakingManagerContract:    l1StakingManagerContract,
-		RawL1StakingManagerContract: rawL1StakingManagerContract,
-		StrategyManagerContract:     strategyManagerContracts,
-		RawStrategyManagerContract:  rawStrategyManagerContracts,
-		EthAddress:                  EthAddress,
-		WEthAddress:                 WEthAddress,
-		USDTAddress:                 USDTAddress,
-		USDCAddress:                 USDCAddress,
-		DAIAddress:                  DAIAddress,
-		OKBAddress:                  OKBAddress,
-		MNTAddress:                  MNTAddress,
-		privateKey:                  priKey,
-		l1SepoliaChainID:            chainIds.L1SepoliaChainId,
-		l1HoleskyChainID:            chainIds.L1HoleskyChainId,
-		zkFairChainId:               chainIds.ZkfairChainId,
-		x1ChainId:                   chainIds.X1ChainId,
-		mantleChainId:               chainIds.MantleChainId,
-		opChainId:                   chainIds.OpChainId,
+		RpcServerConfig:              grpcCfg,
+		db:                           db,
+		HsmConfig:                    hsmCfg,
+		ethClients:                   ethClients,
+		RawL1BridgeContract:          rawL1BridgeContract,
+		RawL2BridgeContract:          rawL2BridgeContracts,
+		RawL1StakingBridgeContract:   rawL1StakingBridgeContract,
+		L1BridgeContract:             l1BridgeContract,
+		L1StakingBridgeContract:      l1StakingBridgeContract,
+		BridgeContractAddress:        PoolContractAddr,
+		DAStrategyAddress:            DaStrategyAddr,
+		GamingStrategyAddress:        GamingStrategyAddr,
+		SocialStrategyAddress:        SocialStrategyAddr,
+		L2BridgeContract:             l2BridgeContracts,
+		DAStrategyContract:           daStrategyContracts,
+		GamingStrategyContract:       gamingStrategyContracts,
+		SocialStrategyContract:       socialStrategyContracts,
+		RawDAStrategyContract:        rawDaStrategyContracts,
+		RawGamingStrategyContract:    rawGamingStrategyContracts,
+		RawSocialStrategyContract:    rawSocialStrategyContracts,
+		l1StakingManagerAddr:         common.HexToAddress(l1StakingManagerAddr),
+		l1StakingManagerContract:     l1StakingManagerContract,
+		RawL1StakingManagerContract:  rawL1StakingManagerContract,
+		StrategyManagerContract:      strategyManagerContracts,
+		RawStrategyManagerContract:   rawStrategyManagerContracts,
+		DelegationManagerContract:    delegationManagerContracts,
+		RawDelegationManagerContract: rawDelegationManagerContracts,
+		EthAddress:                   EthAddress,
+		WEthAddress:                  WEthAddress,
+		USDTAddress:                  USDTAddress,
+		USDCAddress:                  USDCAddress,
+		DAIAddress:                   DAIAddress,
+		OKBAddress:                   OKBAddress,
+		MNTAddress:                   MNTAddress,
+		privateKey:                   priKey,
+		l1SepoliaChainID:             chainIds.L1SepoliaChainId,
+		l1HoleskyChainID:             chainIds.L1HoleskyChainId,
+		zkFairChainId:                chainIds.ZkfairChainId,
+		x1ChainId:                    chainIds.X1ChainId,
+		mantleChainId:                chainIds.MantleChainId,
+		opChainId:                    chainIds.OpChainId,
 		tasks: tasks.Group{HandleCrit: func(err error) {
 			shutdown(fmt.Errorf("critical error in selaginella processor: %w", err))
 		}},
@@ -326,10 +333,21 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
-	CUSTicker := time.NewTicker(10 * time.Second)
+	CMLSTicker := time.NewTicker(10 * time.Second)
 	s.tasks.Go(func() error {
-		for range CUSTicker.C {
-			err := s.ChangeUnstakeSingleTransactionStatus()
+		for range CMLSTicker.C {
+			err := s.ChangeMigrateL1SharesTransactionStatus()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
+	CQWTicker := time.NewTicker(10 * time.Second)
+	s.tasks.Go(func() error {
+		for range CQWTicker.C {
+			err := s.ChangeQueueWithdrawalsTransactionStatus()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -403,10 +421,10 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
-	SUSTicker := time.NewTicker(3 * time.Second)
+	SMLSTicker := time.NewTicker(3 * time.Second)
 	s.tasks.Go(func() error {
-		for range SUSTicker.C {
-			err := s.SendUnstakeSingleTransaction()
+		for range SMLSTicker.C {
+			err := s.SendMigrateL1SharesTransaction()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -642,29 +660,29 @@ func (s *RpcServer) UnstakeBatch(ctx context.Context, in *pb.UnstakeBatchRequest
 	}, nil
 }
 
-func (s *RpcServer) UnstakeSingle(ctx context.Context, in *pb.UnstakeSingleRequest) (*pb.UnstakeSingleResponse, error) {
+func (s *RpcServer) MigrateL1Shares(ctx context.Context, in *pb.MigrateL1SharesRequest) (*pb.MigrateL1SharesResponse, error) {
 	if in == nil {
 		log.Warn("invalid request: request body is empty")
 		return nil, errors.New("invalid request: request body is empty")
 	}
 
-	var unstakeSingles []database.UnstakeSingle
+	var migrateL1Shares []database.MigrateL1Shares
 
-	uSSH, _ := s.db.UnstakeSingle.UnstakeSingleBySourceHash(in.SourceHash)
+	uSSH, _ := s.db.MigrateL1Shares.MigrateL1SharesBySourceHash(in.SourceHash)
 	if uSSH != nil {
 		log.Error("cannot be called repeatedly!")
 		return nil, errors.New("cannot be called repeatedly")
 	}
 
 	sourceHash := common.HexToHash(in.SourceHash)
-	unstakeSingle := s.db.UnstakeSingle.BuildUnstakeSingle(in, sourceHash)
-	unstakeSingles = append(unstakeSingles, unstakeSingle)
+	migrateL1Share := s.db.MigrateL1Shares.BuildMigrateL1Shares(in, sourceHash)
+	migrateL1Shares = append(migrateL1Shares, migrateL1Share)
 
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
 		if err := s.db.Transaction(func(tx *database.DB) error {
-			if len(unstakeSingles) > 0 {
-				if err := s.db.UnstakeSingle.StoreUnstakeSingle(unstakeSingles); err != nil {
+			if len(migrateL1Shares) > 0 {
+				if err := s.db.MigrateL1Shares.StoreMigrateL1Shares(migrateL1Shares); err != nil {
 					return err
 				}
 			}
@@ -678,9 +696,9 @@ func (s *RpcServer) UnstakeSingle(ctx context.Context, in *pb.UnstakeSingleReque
 		return nil, err
 	}
 
-	return &pb.UnstakeSingleResponse{
+	return &pb.MigrateL1SharesResponse{
 		Success: true,
-		Message: "call unstake single success",
+		Message: "call migrate l1 shares success",
 	}, nil
 }
 
@@ -1446,50 +1464,111 @@ func (s *RpcServer) SendUnstakeBatchTransaction() error {
 	return nil
 }
 
-func (s *RpcServer) SendUnstakeSingleTransaction() error {
+func (s *RpcServer) SendMigrateL1SharesTransaction() error {
 
 	var tOpts *bind.TransactOpts
 	var err error
 	var tx *types.Transaction
 	var finalTx *types.Transaction
 	var ctx = context.Background()
-	var nilUnstakeSingle database.UnstakeSingle
+	var nilMigrateL1Shares database.MigrateL1Shares
 
-	unStakeSTx, _ := s.db.UnstakeSingle.OldestPendingNoSentTransaction()
-	if *unStakeSTx == nilUnstakeSingle {
-		log.Warn("no more unstake single tx need to be sent")
+	mLSTx, _ := s.db.MigrateL1Shares.OldestPendingNoSentTransaction()
+	if *mLSTx == nilMigrateL1Shares {
+		log.Warn("no more migrate l1 shares tx need to be sent")
 		return nil
 	}
 
-	tOpts, err = s.newTransactOpts(ctx, s.l1HoleskyChainID)
+	tOpts, err = s.newTransactOpts(ctx, mLSTx.ChainId.Uint64())
 	if err != nil {
 		log.Error("get transactOpts fail", "err", err)
 		return err
 	}
 
-	log.Info(fmt.Sprintf("send claim single request, chainId=%v ,stakerAddr=%v, strategyAddr=%v, sharesAmount=%v", unStakeSTx.ChainId.Uint64(), unStakeSTx.StakerAddress, unStakeSTx.StrategyAddress, unStakeSTx.SharesAmount))
-	tx, err = s.StrategyManagerContract[unStakeSTx.ChainId.Uint64()].MigrateRelatedL1StakerShares(tOpts, unStakeSTx.StakerAddress, unStakeSTx.StrategyAddress, unStakeSTx.SharesAmount)
-
-	finalTx, err = s.RawStrategyManagerContract[unStakeSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
+	log.Info(fmt.Sprintf("send migrate l1 shares transcation, chainId=%v ,unstakerAddr=%v, strategyAddr=%v, sharesAmount=%v, msgNonce=%v", mLSTx.ChainId.Uint64(), mLSTx.UnstakerAddress, mLSTx.StrategyAddress, mLSTx.SharesAmount, mLSTx.L1UnstakeMsgNonce))
+	tx, err = s.StrategyManagerContract[mLSTx.ChainId.Uint64()].MigrateRelatedL1StakerShares(tOpts, mLSTx.UnstakerAddress, mLSTx.StrategyAddress, mLSTx.SharesAmount, mLSTx.L1UnstakeMsgNonce)
 	if err != nil {
-		log.Error("raw send strategy manager claim unstake single request transaction fail", "error", err)
-		return err
-	}
-	err = s.ethClients[unStakeSTx.ChainId.Uint64()].SendTransaction(ctx, finalTx)
-	if err != nil {
-		log.Error("send strategy manager claim unstake single request transaction fail", "error", err)
+		log.Error("get strategy manager migrate l1 shares transaction abi fail", "err", err)
 		return err
 	}
 
-	log.Info("send strategy manager claim unstake single request transaction success", "tx_hash", finalTx.Hash())
+	finalTx, err = s.RawStrategyManagerContract[mLSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
+	if err != nil {
+		log.Error("raw send strategy manager migrate l1 shares transaction fail", "error", err)
+		return err
+	}
+	err = s.ethClients[mLSTx.ChainId.Uint64()].SendTransaction(ctx, finalTx)
+	if err != nil {
+		log.Error("send strategy manager migrate l1 shares transaction fail", "error", err)
+		return err
+	}
 
-	unStakeSTx.TxHash = finalTx.Hash()
+	log.Info("send strategy manager migrate l1 shares transaction success", "tx_hash", finalTx.Hash())
+
+	mLSTx.MTxHash = finalTx.Hash()
 
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
 		if err := s.db.Transaction(func(tx *database.DB) error {
-			if unStakeSTx != nil {
-				if err := s.db.UnstakeSingle.UpdateUnstakeSingleTransactionHash(*unStakeSTx); err != nil {
+			if mLSTx != nil {
+				if err := s.db.MigrateL1Shares.UpdateMigrateL1SharesTransactionHash(*mLSTx); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return err
+	}
+
+	tOpts, err = s.newTransactOpts(ctx, mLSTx.ChainId.Uint64())
+	if err != nil {
+		log.Error("get transactOpts fail", "err", err)
+		return err
+	}
+
+	var queuedWithdrawalParams []staking.IDelegationManagerQueuedWithdrawalParams
+	var strategies []common.Address
+	var shares []*big.Int
+	strategies = append(strategies, mLSTx.StrategyAddress)
+	shares = append(shares, mLSTx.SharesAmount)
+
+	queuedWithdrawalParam := staking.IDelegationManagerQueuedWithdrawalParams{
+		Strategies: strategies,
+		Shares:     shares,
+		Withdrawer: mLSTx.UnstakerAddress,
+	}
+	queuedWithdrawalParams = append(queuedWithdrawalParams, queuedWithdrawalParam)
+
+	log.Info(fmt.Sprintf("send queue withdrawals transcation, chainId=%v ,withdrawerAddr=%v, strategyAddr=%v, sharesAmount=%v", mLSTx.ChainId.Uint64(), mLSTx.UnstakerAddress, mLSTx.StrategyAddress, mLSTx.SharesAmount))
+	tx, err = s.DelegationManagerContract[mLSTx.ChainId.Uint64()].QueueWithdrawals(tOpts, queuedWithdrawalParams)
+	if err != nil {
+		log.Error("get queue withdrawals transaction abi fail", "err", err)
+		return err
+	}
+
+	finalTx, err = s.RawStrategyManagerContract[mLSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
+	if err != nil {
+		log.Error("raw send queue withdrawals transaction fail", "error", err)
+		return err
+	}
+	err = s.ethClients[mLSTx.ChainId.Uint64()].SendTransaction(ctx, finalTx)
+	if err != nil {
+		log.Error("send queue withdrawals transaction fail", "error", err)
+		return err
+	}
+
+	log.Info("send queue withdrawals transaction success", "tx_hash", finalTx.Hash())
+	mLSTx.QTxHash = finalTx.Hash()
+
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if mLSTx != nil {
+				if err := s.db.MigrateL1Shares.UpdateQueueWithdrawalsTransactionHash(*mLSTx); err != nil {
 					return err
 				}
 			}
@@ -1901,33 +1980,64 @@ func (s *RpcServer) ChangeUnstakeBatchTransactionStatus() error {
 	return nil
 }
 
-func (s *RpcServer) ChangeUnstakeSingleTransactionStatus() error {
+func (s *RpcServer) ChangeMigrateL1SharesTransactionStatus() error {
 	var receipt *types.Receipt
 
-	tx, err := s.db.UnstakeSingle.OldestPendingSentTransaction()
+	tx, err := s.db.MigrateL1Shares.OldestMPendingSentTransaction()
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Error("get oldest pending transaction fail", "err", err)
 		return err
 	}
 
 	if tx.ChainId != nil {
-		receipt, err = s.ethClients[tx.ChainId.Uint64()].TxReceiptDetailByHash(tx.TxHash)
+		receipt, err = s.ethClients[tx.ChainId.Uint64()].TxReceiptDetailByHash(tx.MTxHash)
 		if errors.Is(err, ethereum.NotFound) {
 			log.Warn("transaction not found")
 			return nil
 		}
 	} else {
-		log.Info("no more unstake single pending transaction !")
+		log.Info("no more migrate l1 shares pending transaction !")
 		return nil
 	}
 
-	err = s.db.UnstakeSingle.ChangeUnstakeSingleSentStatusByTxHash(receipt.TxHash.String())
+	err = s.db.MigrateL1Shares.ChangeMigrateL1SharesSentStatusByTxHash(receipt.TxHash.String())
 	if err != nil {
-		log.Error("change strategy manager claim unstake single request transaction status fail", "err", err)
+		log.Error("change strategy manager migrate l1 shares transaction status fail", "err", err)
 		return err
 	}
 
-	log.Info("change strategy manager claim unstake single request transaction status success", "txHash", receipt.TxHash)
+	log.Info("change strategy manager migrate l1 shares transaction status success", "txHash", receipt.TxHash)
+
+	return nil
+}
+
+func (s *RpcServer) ChangeQueueWithdrawalsTransactionStatus() error {
+	var receipt *types.Receipt
+
+	tx, err := s.db.MigrateL1Shares.OldestQPendingSentTransaction()
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error("get oldest pending transaction fail", "err", err)
+		return err
+	}
+
+	if tx.ChainId != nil {
+		receipt, err = s.ethClients[tx.ChainId.Uint64()].TxReceiptDetailByHash(tx.MTxHash)
+		if errors.Is(err, ethereum.NotFound) {
+			log.Warn("transaction not found")
+			return nil
+		}
+	} else {
+		log.Info("no more queue withdrawals pending transaction !")
+		return nil
+	}
+
+	err = s.db.MigrateL1Shares.ChangeMigrateL1SharesSentStatusByTxHash(receipt.TxHash.String())
+	if err != nil {
+		log.Error("change queue withdrawals transaction status fail", "err", err)
+		return err
+	}
+
+	log.Info("change queue withdrawals transaction status success", "txHash", receipt.TxHash)
 
 	return nil
 }

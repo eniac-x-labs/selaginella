@@ -21,6 +21,7 @@ rpcs:
     gaming_strategy_address: ''
     social_strategy_address: ''
     strategy_manager: ''
+    delegation_manager: ''
 
   - rpc_url: 'https://eth-sepolia.g.alchemy.com/v2/13PoJNZA67XxE87RJ8ZFyGkWKRGcOOgY'
     chain_id: 11155111
@@ -36,6 +37,7 @@ rpcs:
     gaming_strategy_address: ''
     social_strategy_address: ''
     strategy_manager: ''
+    delegation_manager: ''
 
   - rpc_url: 'https://scroll-sepolia.blockpi.network/v1/rpc/public'
     chain_id: 534351
@@ -47,10 +49,11 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    da_strategy_address: ''
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
+    delegation_manager: ''
 
   - rpc_url: 'https://polygonzkevm-cardona.g.alchemy.com/v2/NSqrnk7bvfh-Leih9i9nXagnVfNWwKQ-'
     chain_id: 2442
@@ -62,11 +65,11 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    da_strategy_address: ''
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
-
+    delegation_manager: ''
 
   - rpc_url: 'https://opt-sepolia.g.alchemy.com/v2/FzuTJBqbf8-w1E6AAcPkWO1a2OGFX2DL'
     chain_id: 11155420
@@ -79,10 +82,10 @@ rpcs:
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
     da_strategy_address: '0x8c3d48b74336Fc8b804279A6100068704bd042c5'
-    gaming_strategy_address: '0x8bD10A81E5e235282122909c77914C39a27a0404'
-    social_strategy_address: '0xdDb60a260d2096D3656bD265Ca9Aa8BA6ca658be'
-    strategy_manager: '0x903f5B8Cd88B1bA4D9d27dCCc91fe2DfCD60f7e8'
-
+    gaming_strategy_address: '0x89c56f4a92eD29434a6A4eF20C4647C98c3Af22F'
+    social_strategy_address: '0x1A88a1594B07E7fa8213e38F6F2d6F0cEf2cEE52'
+    strategy_manager: '0x132294EB4CD7840f4259B2b3C3199A99e878F6B1'
+    delegation_manager: '0xD58107E9DB431b242607b5B55721D689bf165681'
 
   - rpc_url: 'https://base-sepolia.g.alchemy.com/v2/XBMhzm0JcYtvq35NAbDOxEVI3NzqgAb3'
     chain_id: 84532
@@ -95,10 +98,10 @@ rpcs:
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
     da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
-
+    delegation_manager: ''
 
   - rpc_url: 'https://arb-sepolia.g.alchemy.com/v2/NBY1oJ2p9rGIqN2uvX_2gpc0eSkGWw1l'
     chain_id: 421614
@@ -110,11 +113,11 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    da_strategy_address: ''
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
-
+    delegation_manager: ''
 
   - rpc_url: 'https://testnet-rpc.zkfair.io'
     chain_id: 43851
@@ -126,11 +129,11 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    da_strategy_address: ''
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
-
+    delegation_manager: ''
 
   - rpc_url: 'https://testrpc.x1.tech/'
     chain_id: 195
@@ -142,11 +145,11 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    da_strategy_address: ''
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
-    
+    delegation_manager: ''
 
   - rpc_url: 'https://rpc-moon.sepolia.mantle.xyz/v1/OTEyYjhkZmJlZGFjOGFkMGUxZDNmMDYz'
     chain_id: 5003
@@ -158,11 +161,11 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    da_strategy_address: ''
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
-
+    delegation_manager: ''
 
   - rpc_url: 'https://pacific-rpc.sepolia-testnet.manta.network/http'
     chain_id: 3441006
@@ -174,11 +177,11 @@ rpcs:
     dai_address: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     okb_address: '0x3F4B6664338F23d2397c953f2AB4Ce8031663f80'
     mnt_address: '0x65e37B558F64E2Be5768DB46DF22F93d85741A9E'
-    da_strategy_address: '0x326339e3130e49e90504921809531877711cE0A4'
-    gaming_strategy_address: '0xf89ffe7f71255EdE4885d37ce229469901e05796'
-    social_strategy_address: '0xD8510678DC8D49CEf4688Ba8e66e31fb4b607c2B'
+    da_strategy_address: ''
+    gaming_strategy_address: ''
+    social_strategy_address: ''
     strategy_manager: ''
-
+    delegation_manager: ''
 
 database:
   db_host: "postgresql"

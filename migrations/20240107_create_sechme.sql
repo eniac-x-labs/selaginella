@@ -84,20 +84,23 @@ CREATE INDEX IF NOT EXISTS unstake_batch_timestamp ON unstake_batch(timestamp);
 CREATE INDEX IF NOT EXISTS unstake_batch_tx_hash ON unstake_batch(tx_hash);
 CREATE INDEX IF NOT EXISTS unstake_batch_source_hash ON unstake_batch(source_hash);
 
-CREATE TABLE IF NOT EXISTS unstake_single (
+CREATE TABLE IF NOT EXISTS migrate_l1_shares (
      guid                  VARCHAR PRIMARY KEY,
-     staker_address        VARCHAR NOT NULL,
+     unstaker_address      VARCHAR NOT NULL,
      strategy_address      VARCHAR NOT NULL,
      shares_amount         UINT256 NOT NULL,
+     l1_unstake_msg_nonce  UINT256 NOT NULL,
      chain_id              UINT256 NOT NULL,
-     tx_hash               VARCHAR NOT NULL,
+     m_tx_hash             VARCHAR NOT NULL,
+     q_tx_hash             VARCHAR NOT NULL,
      source_hash           VARCHAR NOT NULL,
      status                SMALLINT DEFAULT 0,
      timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
 );
-CREATE INDEX IF NOT EXISTS unstake_single_timestamp ON unstake_single(timestamp);
-CREATE INDEX IF NOT EXISTS unstake_single_tx_hash ON unstake_single(tx_hash);
-CREATE INDEX IF NOT EXISTS unstake_single_source_hash ON unstake_single(source_hash);
+CREATE INDEX IF NOT EXISTS migrate_l1_shares_timestamp ON migrate_l1_shares(timestamp);
+CREATE INDEX IF NOT EXISTS migrate_l1_shares_m_tx_hash ON migrate_l1_shares(m_tx_hash);
+CREATE INDEX IF NOT EXISTS migrate_l1_shares_q_tx_hash ON migrate_l1_shares(q_tx_hash);
+CREATE INDEX IF NOT EXISTS migrate_l1_shares_source_hash ON migrate_l1_shares(source_hash);
 
 CREATE TABLE IF NOT EXISTS transfer_to_l2_bridge (
      guid                  VARCHAR PRIMARY KEY,
