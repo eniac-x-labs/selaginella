@@ -839,7 +839,6 @@ func (s *RpcServer) bridgeLogic(ctx context.Context, bridgeTx *database.CrossCha
 	for chainId, client := range s.ethClients {
 		if chainId == bridgeTx.DestChainId.Uint64() {
 			opts, err = s.newTransactOpts(ctx, chainId)
-			opts.Value = bridgeTx.Amount
 			if err != nil {
 				return nil, err
 			}

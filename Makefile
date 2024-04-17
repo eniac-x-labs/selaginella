@@ -126,7 +126,7 @@ binding-delegationM:
 	| jq .abi \
 	| abigen --pkg bindings \
 	--abi - \
-	--out bindings/staking/bvm_delegatin_manager.go \
+	--out bindings/staking/bvm_delegation_manager.go \
 	--type DelegationManager \
 	--bin $(temp)
 
