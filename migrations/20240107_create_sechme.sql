@@ -76,13 +76,13 @@ CREATE TABLE IF NOT EXISTS unstake_batch (
     dest_chain_id         UINT256 NOT NULL,
     tx_hash               VARCHAR NOT NULL,
     gas_limit             UINT256 NOT NULL,
-    source_hash           VARCHAR NOT NULL,
+    batch                 UINT256 NOT NULL,
     status                SMALLINT DEFAULT 0,
     timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
 );
 CREATE INDEX IF NOT EXISTS unstake_batch_timestamp ON unstake_batch(timestamp);
 CREATE INDEX IF NOT EXISTS unstake_batch_tx_hash ON unstake_batch(tx_hash);
-CREATE INDEX IF NOT EXISTS unstake_batch_source_hash ON unstake_batch(source_hash);
+CREATE INDEX IF NOT EXISTS unstake_batch_batch ON unstake_batch(batch);
 
 CREATE TABLE IF NOT EXISTS migrate_l1_shares (
      guid                  VARCHAR PRIMARY KEY,

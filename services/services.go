@@ -627,14 +627,13 @@ func (s *RpcServer) UnstakeBatch(ctx context.Context, in *pb.UnstakeBatchRequest
 
 	var unstakeBatchs []database.UnstakeBatch
 
-	uBSH, _ := s.db.UnstakeBatch.UnstakeBatchBySourceHash(in.SourceHash)
+	uBSH, _ := s.db.UnstakeBatch.UnstakeBatchByBatch(in.Batch)
 	if uBSH != nil {
 		log.Error("cannot be called repeatedly!")
 		return nil, errors.New("cannot be called repeatedly")
 	}
 
-	sourceHash := common.HexToHash(in.SourceHash)
-	unstakeBatchs = s.db.UnstakeBatch.BuildUnstakeBatch(in, sourceHash)
+	unstakeBatchs = s.db.UnstakeBatch.BuildUnstakeBatch(in)
 
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
@@ -1411,7 +1410,7 @@ func (s *RpcServer) SendUnstakeBatchTransaction() error {
 		return err
 	}
 
-	unstakeTxs, err := s.db.UnstakeBatch.UnstakeBatchsBySourceHash(unStakeTx.SourceHash.String())
+	unstakeTxs, err := s.db.UnstakeBatch.UnstakeBatchListByBatch(unStakeTx.Batch.Uint64())
 	var requests []staking.IUnstakeRequestsManagerWriterequestsInfo
 	for _, unstake := range unstakeTxs {
 		request := staking.IUnstakeRequestsManagerWriterequestsInfo{

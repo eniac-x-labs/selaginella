@@ -70,11 +70,11 @@ message UpdateWithdrawFundingPoolBalanceResponse {
 }
 
 message UnstakeBatchRequest {
-  map<string, uint64> strategy = 1;
+  map<uint64, string> strategy = 1;
   string source_chain_id = 2;
   string dest_chain_id = 3;
   string gas_limit = 4;
-  string source_hash = 5;
+  uint64 batch = 5;
 }
 
 message UnstakeBatchResponse {

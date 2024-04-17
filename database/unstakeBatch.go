@@ -21,7 +21,7 @@ type UnstakeBatch struct {
 	DestChainId     *big.Int       `gorm:"serializer:u256;column:dest_chain_id" db:"dest_chain_id" json:"dest_chain_id" form:"dest_chain_id"`
 	TxHash          common.Hash    `gorm:"column:tx_hash;serializer:bytes" db:"tx_hash" json:"tx_hash" form:"tx_hash"`
 	GasLimit        *big.Int       `gorm:"serializer:u256;column:gas_limit" db:"gas_limit" json:"gas_limit" form:"gas_limit"`
-	SourceHash      common.Hash    `gorm:"column:source_hash;serializer:bytes" db:"source_hash" json:"source_hash" form:"source_hash"`
+	Batch           *big.Int       `gorm:"serializer:u256;column:batch" db:"batch" json:"batch" form:"batch"`
 	Status          int8           `gorm:"column:status" db:"status" json:"status" form:"status"`
 	Timestamp       int64          `gorm:"column:timestamp" db:"timestamp" json:"timestamp" form:"timestamp"`
 }
@@ -33,15 +33,15 @@ func (UnstakeBatch) TableName() string {
 type UnstakeBatchDB interface {
 	UnstakeBatchView
 	StoreUnstakeBatch([]UnstakeBatch) error
-	BuildUnstakeBatch(in *pb.UnstakeBatchRequest, sourceHash common.Hash) []UnstakeBatch
+	BuildUnstakeBatch(in *pb.UnstakeBatchRequest) []UnstakeBatch
 	ChangeUnstakeBatchSentStatusByTxHash(txHash string) error
 	UpdateUnstakeBatchTransactionHash(UnstakeBatch) error
 }
 
 type UnstakeBatchView interface {
 	UnstakeBatchByTxHash(txHash string) (*UnstakeBatch, error)
-	UnstakeBatchBySourceHash(sourceHash string) (*UnstakeBatch, error)
-	UnstakeBatchsBySourceHash(sourceHash string) ([]UnstakeBatch, error)
+	UnstakeBatchByBatch(batch uint64) (*UnstakeBatch, error)
+	UnstakeBatchListByBatch(batch uint64) ([]UnstakeBatch, error)
 	OldestPendingSentTransaction() (*UnstakeBatch, error)
 	OldestPendingNoSentTransaction() (*UnstakeBatch, error)
 }
@@ -54,10 +54,10 @@ func NewUnstakeBatchDB(db *gorm.DB) UnstakeBatchDB {
 	return &unstakeBatchDB{gorm: db}
 }
 
-func (u *unstakeBatchDB) BuildUnstakeBatch(in *pb.UnstakeBatchRequest, sourceHash common.Hash) []UnstakeBatch {
+func (u *unstakeBatchDB) BuildUnstakeBatch(in *pb.UnstakeBatchRequest) []UnstakeBatch {
 	var unstakeBatchs []UnstakeBatch
 
-	for strategyAddr, msgNonce := range in.Strategy {
+	for msgNonce, strategyAddr := range in.Strategy {
 		sci, _ := new(big.Int).SetString(in.SourceChainId, 10)
 		dci, _ := new(big.Int).SetString(in.DestChainId, 10)
 		gasLimit, _ := new(big.Int).SetString(in.GasLimit, 10)
@@ -70,7 +70,7 @@ func (u *unstakeBatchDB) BuildUnstakeBatch(in *pb.UnstakeBatchRequest, sourceHas
 			DestChainId:     dci,
 			TxHash:          common.Hash{},
 			GasLimit:        gasLimit,
-			SourceHash:      sourceHash,
+			Batch:           new(big.Int).SetUint64(in.Batch),
 			Status:          PendingStatus,
 			Timestamp:       time.Now().Unix(),
 		}
@@ -100,9 +100,9 @@ func (u *unstakeBatchDB) UnstakeBatchByTxHash(txHash string) (*UnstakeBatch, err
 	return &unstakeBatch, nil
 }
 
-func (u *unstakeBatchDB) UnstakeBatchBySourceHash(sourceHash string) (*UnstakeBatch, error) {
+func (u *unstakeBatchDB) UnstakeBatchByBatch(batch uint64) (*UnstakeBatch, error) {
 	var unstakeBatch UnstakeBatch
-	result := u.gorm.Table("unstake_batch").Where("source_hash = ?", sourceHash).First(&unstakeBatch)
+	result := u.gorm.Table("unstake_batch").Where("batch = ?", batch).First(&unstakeBatch)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -113,9 +113,9 @@ func (u *unstakeBatchDB) UnstakeBatchBySourceHash(sourceHash string) (*UnstakeBa
 	return &unstakeBatch, nil
 }
 
-func (u *unstakeBatchDB) UnstakeBatchsBySourceHash(sourceHash string) ([]UnstakeBatch, error) {
+func (u *unstakeBatchDB) UnstakeBatchListByBatch(batch uint64) ([]UnstakeBatch, error) {
 	var unstakeBatchs []UnstakeBatch
-	result := u.gorm.Table("unstake_batch").Where("source_hash = ?", sourceHash).Find(&unstakeBatchs)
+	result := u.gorm.Table("unstake_batch").Where("batch = ?", batch).Find(&unstakeBatchs)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
