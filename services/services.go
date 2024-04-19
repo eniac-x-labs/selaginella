@@ -1524,64 +1524,68 @@ func (s *RpcServer) SendMigrateL1SharesTransaction() error {
 		return err
 	}
 
-	tOpts, err = s.newTransactOpts(ctx, mLSTx.ChainId.Uint64())
-	if err != nil {
-		log.Error("get transactOpts fail", "err", err)
-		return err
-	}
+	waitL1Ticker := time.NewTicker(3 * time.Second)
+	for {
+		<-waitL1Ticker.C
 
-	var queuedWithdrawalParams []staking.IDelegationManagerQueuedWithdrawalParams
-	var strategies []common.Address
-	var shares []*big.Int
-	strategies = append(strategies, mLSTx.StrategyAddress)
-	shares = append(shares, mLSTx.SharesAmount)
-
-	queuedWithdrawalParam := staking.IDelegationManagerQueuedWithdrawalParams{
-		Strategies: strategies,
-		Shares:     shares,
-		Withdrawer: mLSTx.UnstakerAddress,
-	}
-	queuedWithdrawalParams = append(queuedWithdrawalParams, queuedWithdrawalParam)
-
-	log.Info(fmt.Sprintf("send queue withdrawals transcation, chainId=%v ,withdrawerAddr=%v, strategyAddr=%v, sharesAmount=%v", mLSTx.ChainId.Uint64(), mLSTx.UnstakerAddress, mLSTx.StrategyAddress, mLSTx.SharesAmount))
-	tx, err = s.DelegationManagerContract[mLSTx.ChainId.Uint64()].QueueWithdrawals(tOpts, queuedWithdrawalParams)
-	if err != nil {
-		log.Error("get queue withdrawals transaction abi fail", "err", err)
-		return err
-	}
-
-	finalTx, err = s.RawDelegationManagerContract[mLSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
-	if err != nil {
-		log.Error("raw send queue withdrawals transaction fail", "error", err)
-		return err
-	}
-	err = s.ethClients[mLSTx.ChainId.Uint64()].SendTransaction(ctx, finalTx)
-	if err != nil {
-		log.Error("send queue withdrawals transaction fail", "error", err)
-		return err
-	}
-
-	log.Info("send queue withdrawals transaction success", "tx_hash", finalTx.Hash())
-	mLSTx.QTxHash = finalTx.Hash()
-
-	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
-		if err := s.db.Transaction(func(tx *database.DB) error {
-			if mLSTx != nil {
-				if err := s.db.MigrateL1Shares.UpdateQueueWithdrawalsTransactionHash(*mLSTx); err != nil {
-					return err
-				}
-			}
-			return nil
-		}); err != nil {
-			log.Error("unable to persist batch", "err", err)
-			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		tOpts, err = s.newTransactOpts(ctx, mLSTx.ChainId.Uint64())
+		if err != nil {
+			log.Error("get transactOpts fail", "err", err)
+			return err
 		}
-		return nil, nil
-	}); err != nil {
-		return err
-	}
 
-	return nil
+		var queuedWithdrawalParams []staking.IDelegationManagerQueuedWithdrawalParams
+		var strategies []common.Address
+		var shares []*big.Int
+		strategies = append(strategies, mLSTx.StrategyAddress)
+		shares = append(shares, mLSTx.SharesAmount)
+
+		queuedWithdrawalParam := staking.IDelegationManagerQueuedWithdrawalParams{
+			Strategies: strategies,
+			Shares:     shares,
+			Withdrawer: mLSTx.UnstakerAddress,
+		}
+		queuedWithdrawalParams = append(queuedWithdrawalParams, queuedWithdrawalParam)
+
+		log.Info(fmt.Sprintf("send queue withdrawals transcation, chainId=%v ,withdrawerAddr=%v, strategyAddr=%v, sharesAmount=%v", mLSTx.ChainId.Uint64(), mLSTx.UnstakerAddress, mLSTx.StrategyAddress, mLSTx.SharesAmount))
+		tx, err = s.DelegationManagerContract[mLSTx.ChainId.Uint64()].QueueWithdrawals(tOpts, queuedWithdrawalParams)
+		if err != nil {
+			log.Error("get queue withdrawals transaction abi fail", "err", err)
+			continue
+		}
+
+		finalTx, err = s.RawDelegationManagerContract[mLSTx.ChainId.Uint64()].RawTransact(tOpts, tx.Data())
+		if err != nil {
+			log.Error("raw send queue withdrawals transaction fail", "error", err)
+			return err
+		}
+		err = s.ethClients[mLSTx.ChainId.Uint64()].SendTransaction(ctx, finalTx)
+		if err != nil {
+			log.Error("send queue withdrawals transaction fail", "error", err)
+			return err
+		}
+
+		log.Info("send queue withdrawals transaction success", "tx_hash", finalTx.Hash())
+		mLSTx.QTxHash = finalTx.Hash()
+
+		if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+			if err := s.db.Transaction(func(tx *database.DB) error {
+				if mLSTx != nil {
+					if err := s.db.MigrateL1Shares.UpdateQueueWithdrawalsTransactionHash(*mLSTx); err != nil {
+						return err
+					}
+				}
+				return nil
+			}); err != nil {
+				log.Error("unable to persist batch", "err", err)
+				return nil, fmt.Errorf("unable to persist batch: %w", err)
+			}
+			return nil, nil
+		}); err != nil {
+			return err
+		}
+
+	}
 }
 
 func (s *RpcServer) SendTransferToL2BridgeTransaction() error {
@@ -2030,7 +2034,7 @@ func (s *RpcServer) ChangeQueueWithdrawalsTransactionStatus() error {
 		return nil
 	}
 
-	err = s.db.MigrateL1Shares.ChangeMigrateL1SharesSentStatusByTxHash(receipt.TxHash.String())
+	err = s.db.MigrateL1Shares.ChangeQueueWithdrawalsSentStatusByTxHash(receipt.TxHash.String())
 	if err != nil {
 		log.Error("change queue withdrawals transaction status fail", "err", err)
 		return err
