@@ -42,6 +42,7 @@ type MigrateL1SharesDB interface {
 	BuildMigrateL1Shares(in *pb.MigrateL1SharesRequest, sourceHash common.Hash) MigrateL1Shares
 	MigrateL1SharesBySourceHash(SourceHash string) (*MigrateL1Shares, error)
 	ChangeMigrateL1SharesSentStatusByTxHash(txHash string) error
+	ChangeQueueWithdrawalsSentStatusByTxHash(txHash string) error
 	UpdateMigrateL1SharesTransactionHash(MigrateL1Shares) error
 	UpdateQueueWithdrawalsTransactionHash(update MigrateL1Shares) error
 }
