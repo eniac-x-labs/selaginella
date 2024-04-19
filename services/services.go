@@ -2024,7 +2024,7 @@ func (s *RpcServer) ChangeQueueWithdrawalsTransactionStatus() error {
 	}
 
 	if tx.ChainId != nil {
-		receipt, err = s.ethClients[tx.ChainId.Uint64()].TxReceiptDetailByHash(tx.MTxHash)
+		receipt, err = s.ethClients[tx.ChainId.Uint64()].TxReceiptDetailByHash(tx.QTxHash)
 		if errors.Is(err, ethereum.NotFound) {
 			log.Warn("transaction not found")
 			return nil
