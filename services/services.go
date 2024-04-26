@@ -1584,7 +1584,7 @@ func (s *RpcServer) SendMigrateL1SharesTransaction() error {
 		}); err != nil {
 			return err
 		}
-
+		return nil
 	}
 }
 
