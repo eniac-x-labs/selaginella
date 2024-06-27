@@ -377,6 +377,17 @@ func (s *RpcServer) Start(ctx context.Context) error {
 		return nil
 	})
 
+	CTLTicker := time.NewTicker(10 * time.Second)
+	s.tasks.Go(func() error {
+		for range CTLTicker.C {
+			err := s.ChangeTransferL2ShareTransactionStatus()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
 	SBTTicker := time.NewTicker(5 * time.Second)
 	s.tasks.Go(func() error {
 		for range SBTTicker.C {
@@ -447,6 +458,17 @@ func (s *RpcServer) Start(ctx context.Context) error {
 	s.tasks.Go(func() error {
 		for range STTTicker.C {
 			err := s.SendTransferToL2BridgeTransaction()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+		return nil
+	})
+
+	STLTicker := time.NewTicker(3 * time.Second)
+	s.tasks.Go(func() error {
+		for range STLTicker.C {
+			err := s.SendTransferL2ShareTransaction()
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -780,6 +802,46 @@ func (s *RpcServer) TransferToL2DappLinkBridge(ctx context.Context, in *pb.Trans
 	return &pb.TransferToL2DappLinkBridgeResponse{
 		Success: true,
 		Message: "call transfer to l2 bridge success",
+	}, nil
+}
+
+func (s *RpcServer) TransferL2Share(ctx context.Context, in *pb.TransferL2ShareRequest) (*pb.TransferL2ShareResponse, error) {
+	if in == nil {
+		log.Warn("invalid request: request body is empty")
+		return nil, errors.New("invalid request: request body is empty")
+	}
+
+	var transferL2Shares []database.TransferL2Share
+
+	tTBB, _ := s.db.TransferL2Share.TransferL2ShareByNonce(in.StakeMessageNonce)
+	if tTBB != nil {
+		log.Error("cannot be called repeatedly!")
+		return nil, errors.New("cannot be called repeatedly")
+	}
+
+	transferL2Shares = s.db.TransferL2Share.BuildTransferL2Share(in)
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if len(transferL2Shares) > 0 {
+				if err := s.db.TransferL2Share.StoreTransferL2Share(transferL2Shares); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return &pb.TransferL2ShareResponse{
+		Success: true,
+		Message: "call transfer l2 share success",
 	}, nil
 }
 
@@ -1851,6 +1913,70 @@ func (s *RpcServer) SendBatchMintTransaction() error {
 	return nil
 }
 
+func (s *RpcServer) SendTransferL2ShareTransaction() error {
+
+	var tOpts *bind.TransactOpts
+	var err error
+	var tx *types.Transaction
+	var finalTx *types.Transaction
+	var ctx = context.Background()
+	var nilTransferL2Share database.TransferL2Share
+
+	transferL2ShareTx, _ := s.db.TransferL2Share.OldestPendingNoSentTransaction()
+	if *transferL2ShareTx == nilTransferL2Share {
+		log.Warn("no more transfer l2 share tx need to be sent")
+		return nil
+	}
+
+	tOpts, err = s.newTransactOpts(ctx, transferL2ShareTx.ChainID.Uint64())
+	if err != nil {
+		log.Error("get transactOpts failed", "err", err)
+		return err
+	}
+
+	tx, err = s.L2BridgeContract[transferL2ShareTx.ChainID.Uint64()].BridgeFinalizeStakingMessage(tOpts, transferL2ShareTx.StrategyAddress, transferL2ShareTx.FromAddress, transferL2ShareTx.ToAddress, transferL2ShareTx.SharesAmount, transferL2ShareTx.StakeMessageNonce, new(big.Int).SetUint64(21000))
+	if err != nil {
+		log.Error("get l2 pool manager transfer l2 share transaction abi fail", "err", err)
+		return err
+	}
+
+	finalTx, err = s.RawL2BridgeContract[transferL2ShareTx.ChainID.Uint64()].RawTransact(tOpts, tx.Data())
+	if err != nil {
+		log.Error("raw l2 pool manager transfer l2 share fail", "error", err)
+		return err
+	}
+
+	err = s.ethClients[transferL2ShareTx.ChainID.Uint64()].SendTransaction(ctx, finalTx)
+	if err != nil {
+		log.Error("send l2 pool manager transfer l2 share transaction fail", "error", err)
+		return err
+	}
+
+	log.Info("send l2 pool manager transfer l2 share transaction success", "tx_hash", finalTx.Hash())
+
+	transferL2ShareTx.TxHash = finalTx.Hash()
+
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](ctx, 10, retryStrategy, func() (interface{}, error) {
+		if err := s.db.Transaction(func(tx *database.DB) error {
+			if transferL2ShareTx != nil {
+				if err := s.db.TransferL2Share.UpdateTransferL2ShareTransactionHash(*transferL2ShareTx); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, fmt.Errorf("unable to persist batch: %w", err)
+		}
+		return nil, nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *RpcServer) ChangeBridgeTransactionStatus() error {
 	var receipt *types.Receipt
 
@@ -2103,6 +2229,37 @@ func (s *RpcServer) ChangeTransferToL2BridgeTransactionStatus() error {
 	}
 
 	log.Info("change transfer to l2 bridge transaction status success", "txHash", receipt.TxHash)
+
+	return nil
+}
+
+func (s *RpcServer) ChangeTransferL2ShareTransactionStatus() error {
+	var receipt *types.Receipt
+
+	tx, err := s.db.TransferL2Share.OldestPendingSentTransaction()
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error("get oldest pending transaction fail", "err", err)
+		return err
+	}
+
+	if tx.StakeMessageNonce != nil {
+		receipt, err = s.ethClients[tx.ChainID.Uint64()].TxReceiptDetailByHash(tx.TxHash)
+		if errors.Is(err, ethereum.NotFound) {
+			log.Warn("transaction not found")
+			return nil
+		}
+	} else {
+		log.Info("no more transfer l2 share pending transaction !")
+		return nil
+	}
+
+	err = s.db.TransferL2Share.ChangeTransferL2ShareSentStatusByTxHash(receipt.TxHash.String())
+	if err != nil {
+		log.Error("change transfer l2 share transaction status fail", "err", err)
+		return err
+	}
+
+	log.Info("change transfer l2 share transaction status success", "txHash", receipt.TxHash)
 
 	return nil
 }

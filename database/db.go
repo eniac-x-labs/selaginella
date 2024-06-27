@@ -24,6 +24,7 @@ type DB struct {
 	MigrateL1Shares                  MigrateL1SharesDB
 	TransferToL2Bridge               TransferToL2BridgeDB
 	BatchMint                        BatchMintDB
+	TransferL2Share                  TransferL2ShareDB
 }
 
 func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
@@ -61,6 +62,7 @@ func NewDB(ctx context.Context, dbConfig config.DB) (*DB, error) {
 		MigrateL1Shares:                  NewMigrateL1SharesDB(gorm),
 		TransferToL2Bridge:               NewTransferToL2BridgeDB(gorm),
 		BatchMint:                        NewBatchMintDB(gorm),
+		TransferL2Share:                  NewTransferL2ShareDB(gorm),
 	}
 	return db, nil
 }
@@ -76,6 +78,7 @@ func (db *DB) Transaction(fn func(db *DB) error) error {
 			MigrateL1Shares:                  NewMigrateL1SharesDB(tx),
 			TransferToL2Bridge:               NewTransferToL2BridgeDB(tx),
 			BatchMint:                        NewBatchMintDB(tx),
+			TransferL2Share:                  NewTransferL2ShareDB(tx),
 		}
 		return fn(txDB)
 	})
