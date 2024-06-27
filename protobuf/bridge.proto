@@ -12,6 +12,7 @@ service BridgeService {
   rpc MigrateL1Shares(MigrateL1SharesRequest) returns (MigrateL1SharesResponse);
   rpc TransferToL2DappLinkBridge(TransferToL2DappLinkBridgeRequest) returns (TransferToL2DappLinkBridgeResponse);
   rpc BatchMint(BatchMintRequest) returns (BatchMintResponse);
+  rpc TransferL2Share(TransferL2ShareRequest) returns (TransferL2ShareResponse);
 }
 
 message CrossChainTransferRequest {
@@ -113,6 +114,22 @@ message BatchMintRequest {
 }
 
 message BatchMintResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ShareMap {
+  map<string, string> share_map = 1;
+}
+
+message TransferL2ShareRequest {
+  map<uint64, ShareMap> shareRequest = 1;
+  string from = 2;
+  string to = 3;
+  uint64 stakeMessageNonce = 4;
+}
+
+message TransferL2ShareResponse {
   bool success = 1;
   string message = 2;
 }

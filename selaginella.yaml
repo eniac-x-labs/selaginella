@@ -184,10 +184,10 @@ rpcs:
     delegation_manager: ''
 
 database:
-  db_host: "postgresql"
+  db_host: "pgsql"
   db_port: 5432
   db_user: "postgres"
-  db_password: "vVb9NhLYui"
+  db_password: "ayKrlI2U52LvyEFlPKXJ"
   db_name: "selaginella"
 
 exporter:

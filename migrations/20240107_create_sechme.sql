@@ -127,3 +127,19 @@ CREATE TABLE IF NOT EXISTS batch_mint (
 CREATE INDEX IF NOT EXISTS batch_mint_timestamp ON batch_mint(timestamp);
 CREATE INDEX IF NOT EXISTS batch_mint_tx_hash ON batch_mint(tx_hash);
 CREATE INDEX IF NOT EXISTS batch_mint_batch ON batch_mint(batch);
+
+CREATE TABLE IF NOT EXISTS transfer_l2_share (
+     guid                  VARCHAR PRIMARY KEY,
+     strategy_address      VARCHAR NOT NULL,
+     shares_amount         UINT256 NOT NULL,
+     chain_id              UINT256 NOT NULL,
+     from_address          VARCHAR NOT NULL,
+     to_address            VARCHAR NOT NULL,
+     stake_message_nonce   UINT256 NOT NULL,
+     tx_hash               VARCHAR NOT NULL,
+     status                SMALLINT DEFAULT 0,
+     timestamp             INTEGER NOT NULL CHECK (timestamp > 0)
+);
+CREATE INDEX IF NOT EXISTS transfer_l2_share_timestamp ON transfer_l2_share(timestamp);
+CREATE INDEX IF NOT EXISTS transfer_l2_share_tx_hash ON transfer_l2_share(tx_hash);
+CREATE INDEX IF NOT EXISTS transfer_l2_share_stake_message_nonce ON transfer_l2_share(stake_message_nonce);
