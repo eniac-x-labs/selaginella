@@ -171,7 +171,7 @@ func runExporter(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lif
 
 	log.Info("running exporter...")
 
-	return exporter.NewExporter(ctx.Context, cfg.Exporter, hsmCfg, db, cfg.RPCs, shutdown, priKey, cfg.ChainId.L1SepoliaChainId, MultipleCfg)
+	return exporter.NewExporter(ctx.Context, cfg.Exporter, hsmCfg, db, cfg.RPCs, shutdown, priKey, cfg.ChainId.L1ChainId, MultipleCfg)
 }
 
 func newCli(GitCommit string, GitDate string) *cli.App {

@@ -42,12 +42,13 @@ type Exporter struct {
 }
 
 type ChainId struct {
-	L1SepoliaChainId uint64 `yaml:"l1_chain_sepolia_id"`
+	L1ChainId        uint64 `yaml:"l1_chain_id"`
 	L1HoleskyChainId uint64 `yaml:"l1_chain_holesky_id"`
 	ZkfairChainId    uint64 `yaml:"zkfair_chain_id"`
 	X1ChainId        uint64 `yaml:"x1_chain_id"`
 	MantleChainId    uint64 `yaml:"mantle_chain_id"`
 	OpChainId        uint64 `yaml:"op_chain_id"`
+	ScrollChainId    uint64 `yaml:"scroll_chain_id"`
 }
 
 type Config struct {
