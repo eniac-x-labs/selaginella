@@ -13,6 +13,7 @@ service BridgeService {
   rpc TransferToL2DappLinkBridge(TransferToL2DappLinkBridgeRequest) returns (TransferToL2DappLinkBridgeResponse);
   rpc BatchMint(BatchMintRequest) returns (BatchMintResponse);
   rpc TransferL2Share(TransferL2ShareRequest) returns (TransferL2ShareResponse);
+  rpc GasOracle(GasOracleRequest) returns (GasOracleResponse);
 }
 
 message CrossChainTransferRequest {
@@ -130,6 +131,18 @@ message TransferL2ShareRequest {
 }
 
 message TransferL2ShareResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+message GasOracleRequest {
+  string l1_fee = 1;
+  string op_fee = 2;
+  string scroll_fee = 3;
+}
+
+message GasOracleResponse {
   bool success = 1;
   string message = 2;
 }
