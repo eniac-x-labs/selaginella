@@ -59,10 +59,10 @@ rpcs:
 
 
 database:
-  db_host: "pgsql"
+  db_host: "172.26.194.103"
   db_port: 5432
   db_user: "postgres"
-  db_password: "ayKrlI2U52LvyEFlPKXJ"
+  db_password: "FSD2dsdfSgs54sd5sghRFVHNHF"
   db_name: "selaginella"
 
 exporter:
