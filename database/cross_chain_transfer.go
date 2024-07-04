@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"errors"
 	"math/big"
 	"strings"
@@ -210,15 +211,17 @@ func (c *crossChainTransferDB) UpdateCrossChainTransferStakingTransactionHash(tr
 }
 
 func (c *crossChainTransferDB) GetPeriodTotalFee(startTimestamp uint64, endTimeStamp uint64, tokenAddress common.Address) (*big.Int, error) {
-	var totalFee string
+	var totalFee sql.NullString
 	err := c.gorm.Table("cross_chain_transfer").Where("timestamp >= ? and timestamp < ? and token_address = ?", startTimestamp, endTimeStamp, strings.ToLower(tokenAddress.String())).Select("SUM(fee) as total_fee").Row().Scan(&totalFee)
 	if err != nil {
 		return nil, err
 	}
-	if totalFee == "" {
+
+	if totalFee.Valid {
+		totalFeeB, _ := new(big.Int).SetString(totalFee.String, 10)
+		return totalFeeB, nil
+	} else {
 		return new(big.Int).SetUint64(0), nil
 	}
 
-	totalFeeB, _ := new(big.Int).SetString(totalFee, 10)
-	return totalFeeB, nil
 }

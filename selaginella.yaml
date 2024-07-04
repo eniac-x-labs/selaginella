@@ -196,7 +196,7 @@ exporter:
 l1_staking_manager_addr: "0x169c7E82d98098BA37FD75b71BC9b6A5dBDB29AA"
 
 chain_id:
-  l1_chain_sepolia_id: 11155111
+  l1_chain_id: 11155111
   l1_chain_holesky_id: 17000
   zkfair_chain_id: 43851
   x1_chain_id: 195
